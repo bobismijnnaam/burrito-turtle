@@ -4,3 +4,10 @@
 /burritoLexer.tokens
 /burritoListener.java
 /burritoParser.java
+/BurritoVocab.g4
+/BurritoVocab.java
+/BurritoVocab.tokens
+/BurritoParser.java
+/BurritoListener.java
+/BurritoLexer.java
+/BurritoBaseListener.java
