@@ -28,9 +28,13 @@ expr: NOT expr
 	| FALSE 
 	;
 
+plusOp: PLUS | MIN;
+
 /**
  * Basic language building blocks
  */
+
+WS: [ \t\r\n]+ -> skip;
 
 ID: LETTER (LETTER | DIGIT)*;
 
@@ -71,4 +75,4 @@ BOOL: 'bool';
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';
 
-NUM: [1-9] DIGIT+;
+NUM: [1-9] DIGIT*;
