@@ -62,3 +62,6 @@ multiline
 {nested}
 
 comment }
+
+# .
+local scope
