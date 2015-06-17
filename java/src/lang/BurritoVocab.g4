@@ -34,6 +34,7 @@ RPAR: ')';
 
 INT: 'int';
 BOOL: 'bool';
+AUTO: '$';
 
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';

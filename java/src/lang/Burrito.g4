@@ -4,31 +4,33 @@ import BurritoVocab;
 
 program: stat*;
 
-stat: target ASS expr SEMI
-	| expr IF stat* (ELSE stat*)? END
-	| expr WHILE stat* END
-	| type target ASS expr SEMI
+stat: target ASS expr SEMI				#assStat
+	| expr IF stat* (ELSE stat*)? END	#ifStat
+	| expr WHILE stat* END				#whileStat
+	| type target ASS expr SEMI			#typeStat
 	;
 
 target: ID;
 
-expr: NOT expr
-	| expr PLUS expr
-	| expr MIN expr
-	| expr DIV expr
-	| expr MUL expr
-	| expr POW expr
-	| expr MOD expr
-	| expr EQ expr
-	| expr LT expr
-	| expr GT expr
-	| expr LTE expr
-	| expr GTE expr
-	| LPAR expr RPAR
-	| ID
-	| NUM
-	| TRUE
-	| FALSE 
+expr: NOT expr			#notExpr
+	| expr PLUS expr	#plusExpr
+	| expr MIN expr		#minExpr
+	| expr DIV expr		#divExpr
+	| expr MUL expr		#mulExpr
+	| expr POW expr		#powExpr
+	| expr MOD expr		#modExpr
+	| expr EQ expr		#eqExpr
+	| expr LT expr		#ltExpr
+	| expr GT expr		#gtExpr
+	| expr LTE expr		#lteExpr
+	| expr GTE expr		#gteExpr
+	| LPAR expr RPAR	#parExpr
+	| ID				#idExpr
+	| NUM				#numExpr
+	| TRUE				#trueExpr
+	| FALSE 			#falseExpr
 	;
 
-type: INT | BOOL;
+type: INT	#intType 
+	| BOOL 	#boolType
+	;
