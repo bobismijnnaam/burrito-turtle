@@ -10,4 +10,9 @@ public class Value extends Operand {
 	public String toString() {
 		return value + " ";
 	}
+
+	@Override
+	public Type getType() {
+		return Type.VALUE;
+	}
 }

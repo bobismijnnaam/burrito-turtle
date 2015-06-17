@@ -11,4 +11,9 @@ public class Reg extends Operand {
 	public String toString() {
 		return reg.toString() + " ";
 	}
+
+	@Override
+	public Type getType() {
+		return Type.REG;
+	}
 }

@@ -26,18 +26,18 @@ public class Program {
 		
 		for (int i = 0; i < instr.size() - 1; i++) {
 			if (!checkArgLength(instr.get(i))) {
-				System.out.println("Number of arguments does not match op.");
+				System.out.printf("Arg length does not match [line %i].\n", i);
 			} else if (!checkArgTypes(instr.get(i))) {
-				System.out.println("Argument types do not match constructor");
+				System.out.printf("Argument types do not match [line %i].\n", i);
 			} else {
 				writer.println("\t\t" + instr.get(i).toString() + ",");
 			}
 		}
 		
 		if (!checkArgLength(instr.get(instr.size() - 1))) {
-			System.out.println("Number of arguments does not match op.");
+			System.out.printf("Arg length does not match [line %i].\n", instr.size() -1);
 		} else if (!checkArgTypes(instr.get(instr.size() - 1))) {
-			System.out.println("Argument types do not match constructor");
+			System.out.printf("Argument types do not match [line %i].\n", instr.size() -1);
 		} else {
 			writer.println("\t\t" + instr.get(instr.size() - 1).toString() + "\n\t\t]\n");
 		}
@@ -45,13 +45,20 @@ public class Program {
 		writer.println("main = run 1 prog");
 		
 		writer.close();
+		
+		System.out.printf("Valid program (Y) compiled succesfully!\n ->[%s]", fileName);
 	}
 	
 	private boolean checkArgLength(Instr in) {
-		return true;
+		return in.op.sig.length == in.args.length;
 	}
 	
 	private boolean checkArgTypes(Instr in) {
-		return true;
+		boolean valid = true;
+		
+		for (int i = 0; i < in.args.length; i++) {
+			valid &= in.op.sig[i] == in.args[i].getType();
+		}
+		return valid;
 	}
 }

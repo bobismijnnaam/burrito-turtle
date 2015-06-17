@@ -1,6 +1,6 @@
 package sprockell;
 
-public class CodeAddr extends Operand {
+public class CodeAddr {
 	public int codeAddr;
 	
 	public CodeAddr (int codeAddr) {

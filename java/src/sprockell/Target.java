@@ -23,5 +23,10 @@ public class Target extends Operand {
 			return "(" + target.toString() + " " + reg.toString() + ")";
 		}
 	}
+
+	@Override
+	public Type getType() {
+		return Type.TARGET;
+	}
 	
 }

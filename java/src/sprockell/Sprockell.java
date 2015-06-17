@@ -6,12 +6,13 @@ import static sprockell.Operand.Type.TARGET;
 import static sprockell.Operand.Type.OPERATOR;
 import static sprockell.Operand.Type.VALUE;
 import static sprockell.Operand.Type.STRING;
+import sprockell.Operand.Type;
 
 public class Sprockell {
 	
 	public enum Op {
 		/** Operator, Reg, Reg => Reg */
-		Compute(2, OPERATOR, REG, REG),
+		Compute(2, OPERATOR, REG, REG, REG),
 		/** Value => Reg */
 		Const(1, VALUE, REG),
 		/** Reg, Target */
@@ -31,7 +32,7 @@ public class Sprockell {
 		/** => Reg */
 		Receive(0, REG),
 		/** Reg => MemAddr */
-		Write(1, MEMADDR),
+		Write(1, REG, MEMADDR),
 		/** MemAddr */
 		TestAndSet(1, MEMADDR),
 		/** End of program */
@@ -41,7 +42,13 @@ public class Sprockell {
 		/** String*/
 		Debug(1, STRING);
 		
-		private Op(int arguments, Operand.Type... sig) {}
+		final public int arguments;
+		final public Type[] sig;
+
+		private Op(int arguments, Operand.Type... sig) {
+			this.arguments = arguments;
+			this.sig = sig;
+		}
 	}
 	
 	public enum Reg {

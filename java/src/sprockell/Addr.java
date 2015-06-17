@@ -1,6 +1,6 @@
 package sprockell;
 
-public class Addr extends Operand {
+public class Addr {
 	
 	public int addr;
 	
@@ -11,4 +11,6 @@ public class Addr extends Operand {
 	public String toString() {
 		return addr + " ";
 	}
+	
+	
 }

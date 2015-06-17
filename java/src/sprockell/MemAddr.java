@@ -30,4 +30,9 @@ public class MemAddr extends Operand {
 			return "(" + memAddr.toString() + " " + reg.toString() + ")";
 		}
 	}
+
+	@Override
+	public Type getType() {
+		return Type.MEMADDR;
+	}
 }

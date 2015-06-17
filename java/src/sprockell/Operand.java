@@ -1,6 +1,6 @@
 package sprockell;
 
-public class Operand {
+public abstract class Operand {
 
 	/** Enumeration of all available operand types. */
 	public static enum Type {
@@ -12,5 +12,7 @@ public class Operand {
 		STRING
 		;
 	}
+	
+	public abstract Type getType();
 
 }

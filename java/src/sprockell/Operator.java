@@ -11,4 +11,9 @@ public class Operator extends Operand {
 	public String toString() {
 		return operator.toString() + " ";
 	}
+
+	@Override
+	public Type getType() {
+		return Type.OPERATOR;
+	}
 }
