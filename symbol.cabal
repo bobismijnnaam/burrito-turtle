@@ -10,3 +10,8 @@ executable testProgram1
   build-depends:  base, containers, random, array
   main-is:        Test1.hs
   hs-source-dirs: sprockell\src .
+  
+executable testProgram2
+  build-depends:  base, containers, random, array
+  main-is:        program.hs
+  hs-source-dirs: sprockell\src .

@@ -5,6 +5,7 @@ public class MemAddr extends Operand {
 	public Sprockell.MemAddr memAddr;
 	public Sprockell.Reg reg;
 	public Addr addr;
+	public String sAddr;
 	
 	public MemAddr(Addr addr) {
 		this.memAddr = Sprockell.MemAddr.Addr;
@@ -16,9 +17,15 @@ public class MemAddr extends Operand {
 		this.reg = reg;
 	}
 	
+	public MemAddr(String sAddr) {
+		this.sAddr = sAddr;
+	}
+	
 	public String toString() {
-		if (reg == null) {
+		if (reg == null && sAddr == null) {
 			return "(" + memAddr.toString() + " " + addr.toString() + ")"; 
+		} else if (sAddr != null) {
+			return sAddr + " ";
 		} else {
 			return "(" + memAddr.toString() + " " + reg.toString() + ")";
 		}
