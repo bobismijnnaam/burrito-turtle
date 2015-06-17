@@ -1,0 +1,3 @@
+[submodule "sprockell"]
+	path = sprockell
+	url = https://github.com/martijnbastiaan/sprockell.git

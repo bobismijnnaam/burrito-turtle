@@ -1,0 +1,12 @@
+name:          	SymbolDev
+version:        0.0
+synopsis:       Package to compile Symbol programs
+author:         Bob Rubbens, Ruben Haasjes
+license:        MIT
+build-type:     Simple
+cabal-version:  >= 1.2
+
+executable testProgram1
+  build-depends:  base, containers, random, array
+  main-is:        Test1.hs
+  hs-source-dirs: sprockell\src .
