@@ -13,12 +13,12 @@ stat: target ASS expr SEMI				#assStat
 target: ID;
 
 expr: NOT expr			#notExpr
-	| expr PLUS expr	#plusExpr
-	| expr MIN expr		#minExpr
 	| expr DIV expr		#divExpr
 	| expr MUL expr		#mulExpr
 	| expr POW expr		#powExpr
 	| expr MOD expr		#modExpr
+	| expr PLUS expr	#plusExpr
+	| expr MIN expr		#minExpr
 	| expr EQ expr		#eqExpr
 	| expr LT expr		#ltExpr
 	| expr GT expr		#gtExpr
