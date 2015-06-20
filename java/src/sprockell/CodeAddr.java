@@ -8,6 +8,6 @@ public class CodeAddr {
 	}
 	
 	public String toString() {
-		return codeAddr + " ";
+		return codeAddr + "";
 	}
 }

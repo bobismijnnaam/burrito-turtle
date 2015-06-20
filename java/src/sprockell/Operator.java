@@ -9,7 +9,7 @@ public class Operator extends Operand {
 	}
 	
 	public String toString() {
-		return operator.toString() + " ";
+		return operator.toString();
 	}
 
 	@Override

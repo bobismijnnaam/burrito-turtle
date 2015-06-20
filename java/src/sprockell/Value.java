@@ -8,7 +8,7 @@ public class Value extends Operand {
 	}
 	
 	public String toString() {
-		return value + " ";
+		return value + "";
 	}
 
 	@Override

@@ -1,5 +1,7 @@
 package sprockell;
 
+import java.util.Map;
+
 import sprockell.Sprockell.Op;
 
 public class Instr {
@@ -11,14 +13,25 @@ public class Instr {
 		this.args = args;
 	}
 	
+	public void fixLabel(Map<String, Integer> labelMap) {
+		if (op == Op.Branch) {
+			((Target) args[1]).fixLabel(labelMap);
+		} else if (op == Op.Jump) {
+			((Target) args[0]).fixLabel(labelMap);
+		}
+	}
+	
 	public String toString() {
-		String op = "";
-		op += this.op.toString() + " ";
+		String result = op.toString() + " ";
 		
 		for (int i = 0; i < args.length; i++) {
-			op += args[i].toString() + "";
+			result += args[i].toString();
+			
+			if (i < args.length - 1) {
+				result += " ";
+			}
 		}
 		
-		return op;
+		return result;
 	}
 }

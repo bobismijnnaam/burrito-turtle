@@ -9,7 +9,7 @@ public class Reg extends Operand {
 	}
 	
 	public String toString() {
-		return reg.toString() + " ";
+		return reg.toString();
 	}
 
 	@Override
@@ -28,5 +28,4 @@ public class Reg extends Operand {
 		RegD,
 		RegE
 	}
-	
 }

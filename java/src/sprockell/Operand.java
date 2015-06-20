@@ -1,8 +1,6 @@
 package sprockell;
 
 public abstract class Operand {
-
-	/** Enumeration of all available operand types. */
 	public static enum Type {
 		REG,
 		MEMADDR,
@@ -14,5 +12,4 @@ public abstract class Operand {
 	}
 	
 	public abstract Type getType();
-
 }

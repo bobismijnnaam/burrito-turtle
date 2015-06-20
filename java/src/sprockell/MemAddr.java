@@ -4,8 +4,8 @@ public class MemAddr extends Operand {
 	
 	public Form memAddr;
 	public Reg.Which reg;
-	public Addr addr;
-	public String sAddr;
+	public Addr addr = null;
+	public String sAddr = null;
 	
 	public MemAddr(Addr addr) {
 		this.memAddr = Form.Addr;
@@ -18,17 +18,21 @@ public class MemAddr extends Operand {
 	}
 	
 	public MemAddr(String sAddr) {
+		this.memAddr = Form.SAddr;
 		this.sAddr = sAddr;
 	}
 	
 	public String toString() {
-		if (reg == null && sAddr == null) {
+		switch(memAddr) {
+		case Addr:
 			return "(" + memAddr.toString() + " " + addr.toString() + ")"; 
-		} else if (sAddr != null) {
+		case SAddr:
 			return sAddr + " ";
-		} else {
+		case Deref:
 			return "(" + memAddr.toString() + " " + reg.toString() + ")";
 		}
+		
+		return "";
 	}
 
 	@Override
@@ -38,6 +42,7 @@ public class MemAddr extends Operand {
 	
 	enum Form {
 		Addr,
+		SAddr,
 		Deref
 	}
 }
