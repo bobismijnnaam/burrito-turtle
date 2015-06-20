@@ -1,7 +1,6 @@
 package sprockell;
 
 public class Addr {
-	
 	public int addr;
 	
 	public Addr(int addr) {
@@ -11,6 +10,4 @@ public class Addr {
 	public String toString() {
 		return addr + " ";
 	}
-	
-	
 }

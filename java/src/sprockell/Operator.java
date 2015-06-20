@@ -2,9 +2,9 @@ package sprockell;
 
 public class Operator extends Operand {
 	
-	public Sprockell.Operator operator;
+	public Which operator;
 	
-	public Operator(Sprockell.Operator operator) {
+	public Operator(Which operator) {
 		this.operator = operator;
 	}
 	
@@ -15,5 +15,24 @@ public class Operator extends Operand {
 	@Override
 	public Type getType() {
 		return Type.OPERATOR;
+	}
+
+	public enum Which {
+		Add,
+		Sub,
+		Mul,
+		Div,
+		Mod,
+		Equal,
+		NEq,
+		Gt,
+		Lt,
+		GtE,
+		LtE,
+		And,
+		Or,
+		Xor,
+		LShift,
+		RShift
 	}
 }

@@ -3,7 +3,6 @@ package sprockell;
 import sprockell.Sprockell.Op;
 
 public class Instr {
-	
 	public Op op;
 	public Operand[] args;
 	
@@ -22,5 +21,4 @@ public class Instr {
 		
 		return op;
 	}
-	
 }

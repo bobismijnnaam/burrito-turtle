@@ -2,17 +2,17 @@ package sprockell;
 
 public class Target extends Operand {
 	
-	public Sprockell.Target target;
+	public Form target;
 	public CodeAddr codeAddr;
-	public Sprockell.Reg reg;
+	public Reg.Which reg;
 	
-	public Target(Sprockell.Target target, CodeAddr codeAddr) {
+	public Target(Form target, CodeAddr codeAddr) {
 		this.target = target;
 		this.codeAddr = codeAddr;
 	}
 	
-	public Target(Sprockell.Reg reg) {
-		this.target = Sprockell.Target.Ind;
+	public Target(Reg.Which reg) {
+		this.target = Form.Ind;
 		this.reg = reg;
 	}
 	
@@ -28,5 +28,12 @@ public class Target extends Operand {
 	public Type getType() {
 		return Type.TARGET;
 	}
+
+	public enum Form {
+		Abs,
+		Rel,
+		Ind
+	}
+	
 	
 }

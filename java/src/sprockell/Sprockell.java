@@ -50,49 +50,6 @@ public class Sprockell {
 			this.sig = sig;
 		}
 	}
-	
-	public enum Reg {
-		Zero,
-		PC,
-		SP,
-		SPID,
-		RegA,
-		RegB,
-		RegC,
-		RegD,
-		RegE
-	}
-	
-	public enum MemAddr {
-		Addr,
-		Deref
-	}
-	
-	public enum Target {
-		Abs,
-		Rel,
-		Ind
-	}
-	
-	public enum Operator {
-		Add,
-		Sub,
-		Mul,
-		Div,
-		Mod,
-		Equal,
-		NEq,
-		Gt,
-		Lt,
-		GtE,
-		LtE,
-		And,
-		Or,
-		Xor,
-		LShift,
-		RShift
-	}
-
 }
 
 

@@ -2,18 +2,18 @@ package sprockell;
 
 public class MemAddr extends Operand {
 	
-	public Sprockell.MemAddr memAddr;
-	public Sprockell.Reg reg;
+	public Form memAddr;
+	public Reg.Which reg;
 	public Addr addr;
 	public String sAddr;
 	
 	public MemAddr(Addr addr) {
-		this.memAddr = Sprockell.MemAddr.Addr;
+		this.memAddr = Form.Addr;
 		this.addr = addr;
 	}
 	
-	public MemAddr(Sprockell.Reg reg) {
-		this.memAddr = Sprockell.MemAddr.Deref;
+	public MemAddr(Reg.Which reg) {
+		this.memAddr = Form.Deref;
 		this.reg = reg;
 	}
 	
@@ -32,7 +32,12 @@ public class MemAddr extends Operand {
 	}
 
 	@Override
-	public Type getType() {
-		return Type.MEMADDR;
+	public Operand.Type getType() {
+		return Operand.Type.MEMADDR;
+	}
+	
+	enum Form {
+		Addr,
+		Deref
 	}
 }

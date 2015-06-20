@@ -2,9 +2,9 @@ package sprockell;
 
 public class Reg extends Operand {
 	
-	public Sprockell.Reg reg;
+	public Which reg;
 	
-	public Reg(Sprockell.Reg reg) {
+	public Reg(Which reg) {
 		this.reg = reg;
 	}
 	
@@ -16,4 +16,17 @@ public class Reg extends Operand {
 	public Type getType() {
 		return Type.REG;
 	}
+
+	public enum Which {
+		Zero,
+		PC,
+		SP,
+		SPID,
+		RegA,
+		RegB,
+		RegC,
+		RegD,
+		RegE
+	}
+	
 }
