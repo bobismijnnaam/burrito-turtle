@@ -1,5 +1,6 @@
 package sprockell;
 
+import java.awt.Label;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -7,12 +8,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.antlr.runtime.Token;
+import org.antlr.v4.runtime.ParserRuleContext;
+
 import sprockell.Sprockell.Op;
 
 public class Program {
 	private List<Instr> instr = new ArrayList<Instr>();;
 	private Map<String, Integer> labelMap = new HashMap<String, Integer>();
 	private Map<Integer, String> lineMap = new HashMap<Integer, String>();
+	
+	/**
+	 * Generates a label based on parser node and a prefix. Pretty much unique unless you run
+	 * it twice with the same inputs, ofcourse.
+	 * @param node
+	 * @param prefix
+	 * @return The label
+	 */
+	public static String mkLbl(ParserRuleContext node, String prefix) {
+		int line = node.getStart().getLine();
+		int column = node.getStart().getCharPositionInLine();
+		return prefix + "-" + line + ":" + column;
+	}
 	
 	/**
 	 * Emits an instruction
