@@ -5,6 +5,7 @@ import java.util.List;
 
 import lang.BurritoBaseListener;
 import lang.BurritoParser.AssStatContext;
+import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.BoolTypeContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
@@ -92,7 +93,7 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.getText();
 		Type type = this.scope.type(id);
 		if (type == null) {
-			addError(ctx, "Variable %s not initialized", id);
+			addError(ctx, "Variable %s not declared", id);
 		} else {
 			setType(ctx, type);
 			setOffset(ctx, this.scope.offset(id));
@@ -184,9 +185,14 @@ public class Checker extends BurritoBaseListener {
 	// STATS ----------------------------
 	@Override
 	public void exitTypeStat(TypeStatContext ctx) {
-		setType(ctx.target(), scope.type(ctx.target().getText()));	
-		checkType(ctx.expr(), getType(ctx.target()));
-		setOffset(ctx.target(), this.scope.offset(ctx.target().getText()));
+		String id = ctx.target().getText();
+		Type type = result.getType(ctx.type());
+		
+		scope.put(id, type);
+		
+		setType(ctx.target(), type);	
+		checkType(ctx.expr(), type);
+		setOffset(ctx.target(), scope.offset(id));
 	}
 	
 	@Override
@@ -206,6 +212,17 @@ public class Checker extends BurritoBaseListener {
 		if (type == getType(ctx.expr())) {
 			addError(ctx, "Can't assign %s = %s", type, getType(ctx.expr()));
 		}
+	}
+	
+	// BLOCK THINGY -------------------------------
+	@Override
+	public void enterBlock(BlockContext ctx) {
+		scope.pushScope();
+	}
+	
+	@Override
+	public void exitBlock(BlockContext ctx) {
+		scope.popScope();
 	}
 	
 	// END OF TYPE CHECKING

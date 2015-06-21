@@ -106,7 +106,7 @@ public class Program {
 		
 		writer.close();
 		
-		System.out.printf("Valid program (Y) compiled succesfully!\n ->[%s]\n", fileName);
+		System.out.printf("Written to file succesfully!\n ->[%s]\n", fileName);
 	}
 	
 	/**

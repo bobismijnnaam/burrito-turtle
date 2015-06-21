@@ -4,11 +4,13 @@ import BurritoVocab;
 
 program: stat*;
 
-stat: target ASS expr SEMI				#assStat
-	| expr IF stat* (ELSE stat*)? END	#ifStat
-	| expr WHILE stat* END				#whileStat
-	| type target ASS expr SEMI			#typeStat
+stat: type target ASS expr SEMI			#typeStat
+	| target ASS expr SEMI				#assStat
+	| expr IF block (ELSE block)? END	#ifStat
+	| expr WHILE block END				#whileStat
 	;
+
+block: stat*;
 
 target: ID;
 
