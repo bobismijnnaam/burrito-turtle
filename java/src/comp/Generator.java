@@ -22,8 +22,10 @@ import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinExprContext;
 import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulExprContext;
+import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NotExprContext;
 import lang.BurritoParser.NumExprContext;
+import lang.BurritoParser.OutStatContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
@@ -248,5 +250,131 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	@Override
+	public List<Instr> visitNegExpr(NegExprContext ctx) {
+		visit(ctx.expr());
+		prog.emit(Compute, new Operator(Sub), new Reg(Zero), new Reg(RegE), new Reg(RegE));
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitOutStat(OutStatContext ctx) {
+		visit(ctx.expr());
+		
+		if (checkResult.getType(ctx.expr()) == Type.BOOL) {
+			Reg workReg = new Reg(RegD);
+			String equals = Program.mkLbl(ctx, "equals");
+			String end = Program.mkLbl(ctx, "end");
+			
+			prog.emit(Compute,  new Operator(Equal), new Reg(Zero), new Reg(RegE), workReg);
+			prog.emit(Branch, workReg, new Target(equals));
+			
+			for (char c : "true".toCharArray()) {
+				prog.emit(Const, new Value(c), workReg);
+				prog.emit(Write, workReg, new MemAddr("stdio"));
+			}
+			prog.emit(Jump, new Target(end));
+			
+			prog.emit(equals, Nop);
+			
+			for (char c : "false".toCharArray()) {
+				prog.emit(Const, new Value(c), workReg);
+				prog.emit(Write, workReg, new MemAddr("stdio"));
+			}
+			
+			prog.emit(end, Nop);
+		} else if (checkResult.getType(ctx.expr()) == Type.INT) {
+			Operator mod = new Operator(Mod);
+			Operator div = new Operator(Div);
+			Operator mul = new Operator(Mul);
+			Operator add = new Operator(Add);
+			
+			Reg numReg = new Reg(RegE);
+			Reg countReg = new Reg(RegB);
+			Reg orderReg = new Reg(RegD);
+			Reg workReg = new Reg(RegC);
+			
+			String begin = Program.mkLbl(ctx, "begin");
+			String unroll = Program.mkLbl(ctx, "unroll");
+			String beginUnroll = Program.mkLbl(ctx, "beginUnroll");
+			String done = Program.mkLbl(ctx, "done"); 
+			
+			// Starting values
+			prog.emit(Const, new Value(10), orderReg);
+			prog.emit(Const, new Value(0), countReg);
+			
+			// TODO: When ComputeI is actually used, replace stack usage here
+			
+			// Print minus if it's negative
+			prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
+			prog.emit(Branch, workReg, new Target(begin));
+			prog.emit(Const, new Value("-".charAt(0)), workReg);
+			prog.emit(Write, workReg, new MemAddr("stdio"));
+			prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
+			
+			// Take modulo of current value and save it on the stack
+			prog.emit(begin, Compute, mod, numReg, orderReg, workReg);
+			prog.emit(Push, workReg);
+			
+			// Divide current modulo by 10 to extract the current digit
+			// 12345 mod 10 => 5, 10 / 10 => 1, 5 div 1 = 5 (the digit)
+			// 12345 mod 100 => 45, 100 / 10 => 10, 45 div 10 => 4 (the digit)
+			prog.emit(Const, new Value(10), workReg);
+			prog.emit(Compute, div, orderReg, workReg, orderReg);
+			
+			// Retrieve the modulo'd current number
+			prog.emit(Pop, workReg);
+			
+			// Retrieve the current digit and save it on the stack for printing
+			prog.emit(Compute, div, workReg, orderReg, workReg);
+			prog.emit(Push, workReg);
+			
+			// Restore the modulo and increment the digit count 
+			prog.emit(Const, new Value(10), workReg);
+			prog.emit(Compute, mul, workReg, orderReg, orderReg);
+			prog.emit(Const, new Value(1), workReg);
+			prog.emit(Compute, add, workReg, countReg, countReg);
+			
+			// If current order is more than the number, we're finished
+			// Otherwise multiply the current order by 10 to go to the next digit
+			// And then jump to the beginning
+			prog.emit(Compute, new Operator(GtE), orderReg, numReg, workReg);
+			prog.emit(Branch, workReg, new Target(unroll));
+			prog.emit(Const, new Value(10), workReg);
+			prog.emit(Compute, mul, workReg, orderReg, orderReg);
+			prog.emit(Jump, new Target(begin));
+			
+			// Initialize registers for printing
+			Reg asciiReg = orderReg;
+			Reg oneReg = numReg;
+			prog.emit(unroll, Const, new Value(48), asciiReg);
+			prog.emit(Const, new Value(1), oneReg);
+			
+			// Get a digit
+			prog.emit(beginUnroll, Pop, workReg);
+			
+			// Convert it to ascii and decrement the digit count
+			prog.emit(Compute, new Operator(Sub), countReg, oneReg, countReg);
+			prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
+			
+			// Output it
+			prog.emit(Write, workReg, new MemAddr("stdio"));
+			
+			// If all digits have been written to stdio, we're done
+			prog.emit(Compute, new Operator(Equal), new Reg(Zero), countReg, workReg);
+			prog.emit(Branch, workReg, new Target(done));
+			
+			// Otherwise, print another digit
+			prog.emit(Jump, new Target(beginUnroll));
+			
+			// Emit done label here
+			prog.emit(done, Nop);
+		} else {
+			System.out.println("Unsupported type given to stdout " + ctx.getText());
+		}
+		
+		
+		return null;
+	}
 
 }

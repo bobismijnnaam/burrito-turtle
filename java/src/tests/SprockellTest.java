@@ -54,20 +54,22 @@ public class SprockellTest {
 	
 	@Test
 	public void generatorTest() {
-		String testProgram = "int a = 1; int b = 2; int c = 1; c = a + b; c < 3 ? c = 3; ! c = c * 2; .";
+//		String testProgram = "int a = 1; int b = 2; int c = 1; c = a + b; c < 3 ? c = 3; ! c = c * 2; .";
+//		String testProgram = "int a = 12345; a|; a = 0; a|; a = 987654321; a|; a = -98765432; a|; a = -12345999; a|; a = -0; a|;";
+		String testProgram = "12345|; 0|; 987654321|; -98765432|; -12345999|; -0|; true|; false|;";
 
 		CharStream input = new ANTLRInputStream(testProgram);
 		
 //		ErrorListener listener = new ErrorListener();
-		Lexer lexer = new BurritoLexer(input);
 //		lexer.removeErrorListeners();
 //		lexer.addErrorListener(listener);
-		TokenStream tokens = new CommonTokenStream(lexer);
-		BurritoParser parser = new BurritoParser(tokens);
 //		parser.removeErrorListeners();
 //		parser.addErrorListener(listener);
-		ParseTree result = parser.program();
 //		listener.throwException();
+		Lexer lexer = new BurritoLexer(input);
+		TokenStream tokens = new CommonTokenStream(lexer);
+		BurritoParser parser = new BurritoParser(tokens);
+		ParseTree result = parser.program();
 		
 		Checker checker = new Checker();
 		Generator generator = new Generator();
@@ -76,10 +78,11 @@ public class SprockellTest {
 			Program prog = generator.generate(result, checkResult);
 			System.out.println("Compiled program: \n");
 			System.out.println(prog.prettyString(0, true));
+			if (!prog.isWellFormed()) System.out.println("Program is not well formed");
 			System.out.println("\nLabels fixed: \n");
 			prog.fixLabels();
 			System.out.println(prog.prettyString(0, true));
-			prog.writeToFile("simpleTest.hs");
+			prog.writeToFile("stdoutTest.hs");
 		} catch (ParseException e) {
 			e.printStackTrace();
 			System.out.println("Something went wrong");

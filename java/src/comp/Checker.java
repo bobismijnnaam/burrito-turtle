@@ -20,6 +20,7 @@ import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinExprContext;
 import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulExprContext;
+import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
@@ -85,6 +86,12 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitNumExpr(NumExprContext ctx) {
+		setType(ctx, Type.INT);
+	}
+	
+	@Override
+	public void exitNegExpr(NegExprContext ctx) {
+		checkType(ctx.expr(), Type.INT);
 		setType(ctx, Type.INT);
 	}
 	

@@ -95,10 +95,10 @@ public class Program {
 	public boolean isWellFormed() {
 		for (int i = 0; i < instr.size(); i++) {
 			if (!checkArgLength(instr.get(i))) {
-				System.out.printf("Arg length does not match [line %i].\n", i);
+				System.out.println("Arg length does not match [line " + i + "]");
 				return false;
 			} else if (!checkArgTypes(instr.get(i))) {
-				System.out.printf("Argument types do not match [line %i].\n", i);
+				System.out.println("Argument types do not match [line " + i + "]");
 				return false;
 			}
 		}
