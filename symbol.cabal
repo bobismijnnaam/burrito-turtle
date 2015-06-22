@@ -15,3 +15,13 @@ executable testProgram2
   build-depends:  base, containers, random, array
   main-is:        program.hs
   hs-source-dirs: sprockell\src .
+
+executable CustomTest1
+  build-depends:  base, containers, random, array
+  main-is:        CustomTest1.hs
+  hs-source-dirs: sprockell\src .
+
+executable SimpleTest1
+  build-depends:  base, containers, random, array
+  main-is:        simpleTest.hs
+  hs-source-dirs: sprockell\src .

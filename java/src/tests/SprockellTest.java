@@ -1,20 +1,23 @@
 package tests;
 
 import static org.junit.Assert.*;
-import static sprockell.Operator.Which.Add;
-import static sprockell.Reg.Which.RegA;
-import static sprockell.Reg.Which.RegB;
-import static sprockell.Reg.Which.RegC;
-import static sprockell.Sprockell.Op.Compute;
-import static sprockell.Sprockell.Op.Const;
-import static sprockell.Sprockell.Op.EndProg;
-import static sprockell.Sprockell.Op.Jump;
-import static sprockell.Sprockell.Op.Write;
+import static sprockell.Operator.Which.*;
+import static sprockell.Reg.Which.*;
+import static sprockell.Sprockell.Op.*;
 
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 
+import lang.BurritoLexer;
+import lang.BurritoParser;
+
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.Lexer;
+import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
 import sprockell.MemAddr;
@@ -23,24 +26,12 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+import comp.Checker;
+import comp.Generator;
+import comp.ParseException;
+import comp.Result;
 
 public class SprockellTest {
-	
-	@Test
-	public void hashMapTest() {
-		String a = new String("a");
-		String b = new String("c");
-		b = b.replace("c", "a");
-		
-		Map<String, Integer> map = new HashMap<String, Integer>();
-		map.put(a, 3);
-		map.put(b, 1800);
-	
-		System.out.println("a is " + a);
-		System.out.println("b is " + b);
-		System.out.println("a equals " + map.get("a"));
-		// (y) (y)
-	}
 	
 	@Test
 	public void sprockellTest() {
@@ -59,12 +50,42 @@ public class SprockellTest {
 		System.out.println("After subsitution");
 		prog.fixLabels();
 		System.out.println(prog.prettyString(0, false));
+	}
+	
+	@Test
+	public void generatorTest() {
+		String testProgram = "int a = 1; int b = 2; int c = 1; c = a + b; c < 3 ? c = 3; ! c = c * 2; .";
+
+		CharStream input = new ANTLRInputStream(testProgram);
 		
-//		try {
-////			prog.writeToFile("program.hs");
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+//		ErrorListener listener = new ErrorListener();
+		Lexer lexer = new BurritoLexer(input);
+//		lexer.removeErrorListeners();
+//		lexer.addErrorListener(listener);
+		TokenStream tokens = new CommonTokenStream(lexer);
+		BurritoParser parser = new BurritoParser(tokens);
+//		parser.removeErrorListeners();
+//		parser.addErrorListener(listener);
+		ParseTree result = parser.program();
+//		listener.throwException();
+		
+		Checker checker = new Checker();
+		Generator generator = new Generator();
+		try {
+			Result checkResult = checker.check(result);
+			Program prog = generator.generate(result, checkResult);
+			System.out.println("Compiled program: \n");
+			System.out.println(prog.prettyString(0, true));
+			System.out.println("\nLabels fixed: \n");
+			prog.fixLabels();
+			System.out.println(prog.prettyString(0, true));
+			prog.writeToFile("simpleTest.hs");
+		} catch (ParseException e) {
+			e.printStackTrace();
+			System.out.println("Something went wrong");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

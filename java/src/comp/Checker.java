@@ -42,7 +42,7 @@ public class Checker extends BurritoBaseListener {
 	/** List of errors collected in the latest call of {@link #check}. */
 	private List<String> errors;
 	
-	Result check(ParseTree tree) throws ParseException {
+	public Result check(ParseTree tree) throws ParseException {
 		this.scope = new Scope();
 		this.result = new Result();
 		this.errors = new ArrayList<>();
@@ -209,7 +209,8 @@ public class Checker extends BurritoBaseListener {
 	public void exitAssStat(AssStatContext ctx) {
 		String id = ctx.target().getText();
 		Type type = this.scope.type(id);
-		if (type == getType(ctx.expr())) {
+		setOffset(ctx.target(), scope.offset(id));
+		if (type != getType(ctx.expr())) {
 			addError(ctx, "Can't assign %s = %s", type, getType(ctx.expr()));
 		}
 	}

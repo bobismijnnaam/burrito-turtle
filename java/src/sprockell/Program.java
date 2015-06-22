@@ -69,7 +69,7 @@ public class Program {
 	public String prettyString(int indent, boolean printLabels) {
 		String result = "";
 		
-		for (int i = 0; i < instr.size() - 1; i++) {
+		for (int i = 0; i < instr.size(); i++) {
 			if (printLabels) {
 				if (lineMap.containsKey(i)) {
 					result += lineMap.get(i) + ": ";
@@ -117,7 +117,7 @@ public class Program {
 		writer.println("import Sprockell.System\n");
 		writer.println("prog = [");
 		
-		writer.println(prettyString(2, false) + "\n]");
+		writer.println(prettyString(2, false) + "\n\t\t]");
 		
 		writer.println("main = run 1 prog");
 		

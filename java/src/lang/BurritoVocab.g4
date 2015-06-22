@@ -39,7 +39,7 @@ AUTO: '$';
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';
 
-NUM: [1-9] DIGIT*;
+NUM: [1-9] DIGIT* | '0';
 
 ID: LETTER (LETTER | DIGIT)*;
 
