@@ -65,3 +65,11 @@ comment }
 
 # .
 local scope
+
+-- for loop
+int i = 0; i < 10 @[i++]
+	a = 3;
+.
+
+-- ranged for
+-- TODO
