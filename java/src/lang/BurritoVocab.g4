@@ -23,6 +23,7 @@ ELSE: '!';
 IF: '?';
 WHILE: '@';
 IO: '|';
+IONL: '\\';
 SCOPE: '#';
 END: '.';
 SEMI: ';';
@@ -31,6 +32,10 @@ COMMB: '{';
 COMME: '}';
 LPAR: '(';
 RPAR: ')';
+
+AND: '&&';
+OR: '||';
+XOR: '^';
 
 INT: 'int';
 BOOL: 'bool';

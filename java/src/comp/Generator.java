@@ -155,8 +155,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private List<Instr> emitArOp(ParserRuleContext ctx, Operator.Which op) {
 		visit(ctx.getChild(0));
 		prog.emit(Push, new Reg(RegE));
-		prog.emit(Pop, new Reg(RegD));
 		visit(ctx.getChild(2));
+		prog.emit(Pop, new Reg(RegD));
 		prog.emit(Compute, new Operator(op), new Reg(RegD), new Reg(RegE), new Reg(RegE));
 		
 		return null;
@@ -261,6 +261,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitOutStat(OutStatContext ctx) {
 		visit(ctx.expr());
 		
+		// Different routine depending on type
 		if (checkResult.getType(ctx.expr()) == Type.BOOL) {
 			Reg workReg = new Reg(RegD);
 			String equals = Program.mkLbl(ctx, "equals");
@@ -371,10 +372,33 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(done, Nop);
 		} else {
 			System.out.println("Unsupported type given to stdout " + ctx.getText());
+			return null;
 		}
 		
+		Reg workReg = new Reg(RegE);
+		String nl = "\n"; // System.lineSeparator(); // Sprockell seems to handle \n just fine
+
+		for (int i = 0; i < ctx.newlines().getChildCount(); i++) {
+			for (char c : nl.toCharArray()) {
+				prog.emit(Const, new Value(c), workReg);
+				prog.emit(Write, workReg, new MemAddr("stdio"));
+			}
+		}
 		
 		return null;
 	}
+	
+//	@Override
+//	public List<Instr> visitNewlineStat(NewlineStatContext ctx) {
+//		String nl = System.lineSeparator();
+//		Reg workReg = new Reg(RegE);
+//		
+//		for (char c : nl.toCharArray()) {
+//			prog.emit(Const, new Value(c), workReg);
+//			prog.emit(Write, workReg, new MemAddr("stdio"));
+//		}
+//		
+//		return null;
+//	}
 
 }

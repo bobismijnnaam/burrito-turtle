@@ -122,8 +122,6 @@ public class Program {
 		writer.println("main = run 1 prog");
 		
 		writer.close();
-		
-		System.out.printf("Written to file succesfully!\n ->[%s]\n", fileName);
 	}
 	
 	/**
@@ -151,10 +149,13 @@ public class Program {
 	
 	/**
 	 * Does label subsitution. Actually changes arguments in said program, so if you want to keep the original around make a copy!
+	 * @return True if all labels were properly defined, false if not.
 	 */
-	public void fixLabels() {
+	public boolean fixLabels() {
+		boolean result = true;
 		for (Instr inst : instr) {
-			inst.fixLabel(labelMap);
+			result = inst.fixLabel(labelMap) && result;
 		}
+		return result;
 	}
 }

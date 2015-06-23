@@ -13,12 +13,14 @@ public class Instr {
 		this.args = args;
 	}
 	
-	public void fixLabel(Map<String, Integer> labelMap) {
+	public boolean fixLabel(Map<String, Integer> labelMap) {
 		if (op == Op.Branch) {
-			((Target) args[1]).fixLabel(labelMap);
+			return ((Target) args[1]).fixLabel(labelMap);
 		} else if (op == Op.Jump) {
-			((Target) args[0]).fixLabel(labelMap);
+			return ((Target) args[0]).fixLabel(labelMap);
 		}
+		
+		return true;
 	}
 	
 	public String toString() {

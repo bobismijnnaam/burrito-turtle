@@ -8,7 +8,7 @@ stat: type target ASS expr SEMI			#typeStat
 	| target ASS expr SEMI				#assStat
 	| expr IF block (ELSE block)? END	#ifStat
 	| expr WHILE block END				#whileStat
-	| expr IO SEMI						#outStat
+	| expr IO newlines SEMI				#outStat
 	;
 
 block: stat*;
@@ -38,3 +38,5 @@ expr: NOT expr			#notExpr
 type: INT	#intType 
 	| BOOL 	#boolType
 	;
+	
+newlines: IONL*;
