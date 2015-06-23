@@ -28,7 +28,9 @@ SCOPE: '#';
 END: '.';
 SEMI: ';';
 LPAR: '(';
-RPAR: ')'; 
+RPAR: ')';
+LBRA: '[';
+RBRA: ']';
 
 AND: '&&';
 OR: '||';

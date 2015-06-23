@@ -154,7 +154,7 @@ public class SprockellTest {
 			System.out.println("There were errors");
 			return null;
 		}
-		
+	
 		try {
 			prog.writeToFile("test.hs");
 			

@@ -1,7 +1,7 @@
 package comp;
 
 import static sprockell.Operator.Which.*;
-import static sprockell.Program.*;
+import static sprockell.Program.mkLbl;
 import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
 
@@ -32,7 +32,7 @@ import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.StatContext;
 import lang.BurritoParser.TrueExprContext;
-import lang.BurritoParser.TypeStatContext;
+import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.WhileStatContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -50,14 +50,10 @@ import sprockell.Value;
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private Program prog;
 	private Result checkResult;
-	private ParseTreeProperty<Reg> regs;
-	private ParseTreeProperty<String> labels;
 
 	public Program generate(ParseTree tree, Result checkResult) {
 		this.prog = new Program();
 		this.checkResult = checkResult;
-		this.regs = new ParseTreeProperty<>();
-		this.labels = new ParseTreeProperty<>();
 		tree.accept(this);
 		return this.prog;
 	}
@@ -74,10 +70,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 	
 	@Override
-	public List<Instr> visitTypeStat(TypeStatContext ctx) {
+	public List<Instr> visitTypeAssignStat(TypeAssignStatContext ctx) {
 		visit(ctx.expr());
 		// TODO: Replace with storeAI (store reg => reg, offset)
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.target())), new Reg(RegB));
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
 		prog.emit(Compute, new Operator(Add), new Reg(RegA), new Reg(RegB), new Reg(RegB));
 		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		
@@ -262,7 +258,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		visit(ctx.expr());
 		
 		// Different routine depending on type
-		if (checkResult.getType(ctx.expr()) == Type.BOOL) {
+		if (checkResult.getType(ctx.expr()).equals(new Type.Bool())) {
 			Reg workReg = new Reg(RegD);
 			String equals = Program.mkLbl(ctx, "equals");
 			String end = Program.mkLbl(ctx, "end");
@@ -284,7 +280,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			}
 			
 			prog.emit(end, Nop);
-		} else if (checkResult.getType(ctx.expr()) == Type.INT) {
+		} else if (checkResult.getType(ctx.expr()).equals(new Type.Int())) {
 			Operator mod = new Operator(Mod);
 			Operator div = new Operator(Div);
 			Operator mul = new Operator(Mul);
@@ -387,18 +383,4 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 		return null;
 	}
-	
-//	@Override
-//	public List<Instr> visitNewlineStat(NewlineStatContext ctx) {
-//		String nl = System.lineSeparator();
-//		Reg workReg = new Reg(RegE);
-//		
-//		for (char c : nl.toCharArray()) {
-//			prog.emit(Const, new Value(c), workReg);
-//			prog.emit(Write, workReg, new MemAddr("stdio"));
-//		}
-//		
-//		return null;
-//	}
-
 }

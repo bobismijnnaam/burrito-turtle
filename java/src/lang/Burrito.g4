@@ -4,16 +4,19 @@ import BurritoVocab;
 
 program: stat*; 
 
-stat: type target ASS expr SEMI			#typeStat
+stat: type ID ASS expr SEMI				#typeAssignStat
 	| target ASS expr SEMI				#assStat
 	| expr IF block (ELSE block)? END	#ifStat
 	| expr WHILE block END				#whileStat
+	| type ID SEMI						#typeStat
 	| expr IO newlines SEMI				#outStat
 	;
 
 block: stat*; 
 
-target: ID; 
+target: ID								#idTarget
+	| ID LBRA expr RBRA					#arrayTarget
+	;
 
 expr: NOT expr			#notExpr
 	| expr DIV expr		#divExpr
@@ -36,6 +39,7 @@ expr: NOT expr			#notExpr
 	;
 
 type: INT	#intType 
+	| type LBRA NUM RBRA #arrayType
 	| BOOL 	#boolType
 	;
 	
