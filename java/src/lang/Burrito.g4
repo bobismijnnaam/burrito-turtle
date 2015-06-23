@@ -36,6 +36,7 @@ expr: NOT expr			#notExpr
 	| TRUE				#trueExpr
 	| FALSE 			#falseExpr
 	| MIN expr			#negExpr
+	| ID LBRA expr RBRA	#arrayExpr
 	;
 
 type: INT	#intType 

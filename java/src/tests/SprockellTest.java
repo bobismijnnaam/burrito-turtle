@@ -133,9 +133,18 @@ public class SprockellTest {
 	}
 	
 	@Test
-	public void simpleLogic() {
-		// TODO: When logic is implemented we'll implement this
-		assertTrue(false);
+	public void arrayTest() {
+		String testProgram = ""
+				+ "int x = 0;"
+				+ "int[100] z;"
+				+ "x < 100 @"
+				+ "z[x] = x;"
+				+ "z[x]|;"
+				+ "x = x + 1;"
+				+ "."
+				;
+		String result = compileAndRun(testProgram);
+		System.out.println(result);
 	}
 	
 	public static String compileAndRun(String progStr) {

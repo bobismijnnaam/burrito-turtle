@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lang.BurritoBaseListener;
+import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
@@ -28,7 +29,6 @@ import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
-import lang.BurritoParser.TargetContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -87,12 +87,14 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitIdTarget(IdTargetContext ctx) {
 		setType(ctx, scope.type(ctx.ID().getText()));
+		setOffset(ctx.ID(), scope.offset(ctx.ID().getText()));
 	}
 	
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
 		setType(ctx, scope.type(ctx.ID().getText()));
 		checkType(ctx.expr(), new Type.Int());
+		setOffset(ctx.ID(), scope.offset(ctx.ID().getText()));
 	}
 	
 	// EXPR -----------------------------
@@ -129,6 +131,17 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitParExpr(ParExprContext ctx) {
 		setType(ctx, getType(ctx.expr()));
+	}
+	
+	@Override
+	public void exitArrayExpr(ArrayExprContext ctx) {
+		String id = ctx.ID().getText();
+		id = id.split("\\[")[0];
+		Type.Array array = (Array) this.scope.type(id);
+		setType(ctx.ID(), array);
+		setType(ctx, array.elemType);
+		setOffset(ctx.ID(), this.scope.offset(id));
+		checkType(ctx.expr(), new Type.Int());
 	}
 	
 	// TODO , By compare check if it is a type that can be compared
