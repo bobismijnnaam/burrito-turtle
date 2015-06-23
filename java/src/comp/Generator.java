@@ -1,9 +1,31 @@
 package comp;
 
-import static sprockell.Operator.Which.*;
-import static sprockell.Program.*;
-import static sprockell.Reg.Which.*;
-import static sprockell.Sprockell.Op.*;
+import static sprockell.Operator.Which.Add;
+import static sprockell.Operator.Which.Div;
+import static sprockell.Operator.Which.Equal;
+import static sprockell.Operator.Which.Gt;
+import static sprockell.Operator.Which.GtE;
+import static sprockell.Operator.Which.Lt;
+import static sprockell.Operator.Which.LtE;
+import static sprockell.Operator.Which.Mod;
+import static sprockell.Operator.Which.Mul;
+import static sprockell.Operator.Which.Sub;
+import static sprockell.Program.mkLbl;
+import static sprockell.Reg.Which.RegA;
+import static sprockell.Reg.Which.RegB;
+import static sprockell.Reg.Which.RegD;
+import static sprockell.Reg.Which.RegE;
+import static sprockell.Reg.Which.Zero;
+import static sprockell.Sprockell.Op.Branch;
+import static sprockell.Sprockell.Op.Compute;
+import static sprockell.Sprockell.Op.Const;
+import static sprockell.Sprockell.Op.EndProg;
+import static sprockell.Sprockell.Op.Jump;
+import static sprockell.Sprockell.Op.Load;
+import static sprockell.Sprockell.Op.Nop;
+import static sprockell.Sprockell.Op.Pop;
+import static sprockell.Sprockell.Op.Push;
+import static sprockell.Sprockell.Op.Store;
 
 import java.util.List;
 
@@ -30,7 +52,7 @@ import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.StatContext;
 import lang.BurritoParser.TrueExprContext;
-import lang.BurritoParser.TypeStatContext;
+import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.WhileStatContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -72,10 +94,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 	
 	@Override
-	public List<Instr> visitTypeStat(TypeStatContext ctx) {
+	public List<Instr> visitTypeAssignStat(TypeAssignStatContext ctx) {
 		visit(ctx.expr());
 		// TODO: Replace with storeAI (store reg => reg, offset)
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.target())), new Reg(RegB));
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
 		prog.emit(Compute, new Operator(Add), new Reg(RegA), new Reg(RegB), new Reg(RegB));
 		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		

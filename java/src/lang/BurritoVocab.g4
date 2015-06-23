@@ -31,6 +31,8 @@ COMMB: '{';
 COMME: '}';
 LPAR: '(';
 RPAR: ')';
+LBRA: '[';
+RBRA: ']';
 
 INT: 'int';
 BOOL: 'bool';

@@ -68,7 +68,6 @@ public class SprockellTest {
 //		parser.addErrorListener(listener);
 		ParseTree result = parser.program();
 //		listener.throwException();
-		
 		Checker checker = new Checker();
 		Generator generator = new Generator();
 		try {

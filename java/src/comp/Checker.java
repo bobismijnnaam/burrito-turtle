@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lang.BurritoBaseListener;
+import lang.BurritoParser.ArrayTargetContext;
+import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.BoolTypeContext;
@@ -13,6 +15,7 @@ import lang.BurritoParser.FalseExprContext;
 import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
+import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IntTypeContext;
 import lang.BurritoParser.LtExprContext;
@@ -24,7 +27,9 @@ import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
+import lang.BurritoParser.TargetContext;
 import lang.BurritoParser.TrueExprContext;
+import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
 import lang.BurritoParser.WhileStatContext;
 
@@ -32,6 +37,8 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+
+import comp.Type.Array;
 
 public class Checker extends BurritoBaseListener {
 	
@@ -63,41 +70,53 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitBoolType(BoolTypeContext ctx) {
-		setType(ctx, Type.BOOL);
+		setType(ctx, new Type.Bool());
 	}
 	
 	@Override
 	public void exitIntType(IntTypeContext ctx) {
-		setType(ctx, Type.INT);
+		setType(ctx, new Type.Int());
+	}
+	
+	@Override
+	public void exitArrayType(ArrayTypeContext ctx) {
+		setType(ctx, new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText())));
+	}
+	
+	@Override
+	public void exitIdTarget(IdTargetContext ctx) {
+		setType(ctx, scope.type(ctx.ID().getText()));
+	}
+	
+	@Override
+	public void exitArrayTarget(ArrayTargetContext ctx) {
+		setType(ctx, scope.type(ctx.ID().getText()));
+		checkType(ctx.expr(), new Type.Int());
 	}
 	
 	// EXPR -----------------------------
 	@Override
 	public void exitFalseExpr(FalseExprContext ctx) {
-		setType(ctx, Type.BOOL);
+		setType(ctx, new Type.Bool());
 	}
 	
 	@Override
 	public void exitTrueExpr(TrueExprContext ctx) {
-		// TODO Auto-generated method stub
-		setType(ctx, Type.BOOL);
+		setType(ctx, new Type.Bool());
 	}
 	
 	@Override
 	public void exitNumExpr(NumExprContext ctx) {
-		setType(ctx, Type.INT);
+		setType(ctx, new Type.Int());
 	}
 	
 	@Override
 	public void exitIdExpr(IdExprContext ctx) {
 		String id = ctx.getText();
 		Type type = this.scope.type(id);
-		if (type == null) {
-			addError(ctx, "Variable %s not declared", id);
-		} else {
-			setType(ctx, type);
-			setOffset(ctx, this.scope.offset(id));
-		}
+		setType(ctx, type);
+		checkType(ctx, type);
+		setOffset(ctx, this.scope.offset(id));
 	}
 	
 	@Override
@@ -134,11 +153,9 @@ public class Checker extends BurritoBaseListener {
 	void checkTypeCompare(ParserRuleContext ctx) {
 		Type type1 = getType(ctx.getChild(0));
 		Type type2 = getType(ctx.getChild(2));
-		if (type1 != type2) {
-			addError(ctx, "Can't compare %s == %s types!", type1, type2);
-		} else {
-			setType(ctx, Type.BOOL);
-		}
+		checkType((ParserRuleContext) ctx.getChild(0), type2);
+		checkType((ParserRuleContext) ctx.getChild(2), type1);
+		setType(ctx, new Type.Bool());
 	}
 	
 	@Override
@@ -172,46 +189,67 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	void checkTypeOp(ParserRuleContext ctx) {
-		Type type1 = getType(ctx.getChild(0));
-		Type type2 = getType(ctx.getChild(2));
-		String op = ctx.getChild(1).getText();
-		if (type1 != Type.INT || type2 != Type.INT) {
-			addError(ctx, "Can't %s %s %s!", type1, op, type2);
-		} else {
-			setType(ctx, Type.INT);
-		}
+		checkType((ParserRuleContext) ctx.getChild(0), new Type.Int());
+		checkType((ParserRuleContext) ctx.getChild(2), new Type.Int());
+		setType(ctx, new Type.Int());
 	}
 	
 	// STATS ----------------------------
 	@Override
-	public void exitTypeStat(TypeStatContext ctx) {
-		String id = ctx.target().getText();
+	public void exitTypeAssignStat(TypeAssignStatContext ctx) {
+		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
 		
 		scope.put(id, type);
 		
-		setType(ctx.target(), type);	
+		setType(ctx.ID(), type);	
 		checkType(ctx.expr(), type);
-		setOffset(ctx.target(), scope.offset(id));
+		setOffset(ctx.ID(), scope.offset(id));
+	}
+	
+	@Override
+	public void exitTypeStat(TypeStatContext ctx) {
+		String id = ctx.ID().getText();
+		Type type = result.getType(ctx.type());
+		
+		if (ctx.getChildCount() > 0) {
+			scope.put(id, type, new Integer(ctx.type().getChild(2).getText()));
+		} else {
+			scope.put(id, type);
+		}
+		
+		setType(ctx.ID(), type);		
+		setOffset(ctx.ID(), scope.offset(id));
 	}
 	
 	@Override
 	public void exitWhileStat(WhileStatContext ctx) {
-		checkType(ctx.expr(), Type.BOOL);
+		checkType(ctx.expr(), new Type.Bool());
 	}
 	
 	@Override
 	public void exitIfStat(IfStatContext ctx) {
-		checkType(ctx.expr(), Type.BOOL);
+		checkType(ctx.expr(), new Type.Bool());
 	}
 	
 	@Override
 	public void exitAssStat(AssStatContext ctx) {
 		String id = ctx.target().getText();
+		
 		Type type = this.scope.type(id);
-		setOffset(ctx.target(), scope.offset(id));
-		if (type != getType(ctx.expr())) {
-			addError(ctx, "Can't assign %s = %s", type, getType(ctx.expr()));
+		if (id.contains("[")) {
+			id = id.split("\\[")[0];
+			Type.Array array = (Array) this.scope.type(id);
+			if (array != null)
+				type = array.elemType;
+		}
+		
+		if (type != null) {
+			if (checkType(ctx.expr(), type)) {
+				setOffset(ctx.target(), scope.offset(id));
+			}
+		} else {
+			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
 		}
 	}
 	
@@ -242,16 +280,19 @@ public class Checker extends BurritoBaseListener {
 	/** Checks the inferred type of a given parse tree,
 	 * and adds an error if it does not correspond to the expected type.
 	 */
-	private void checkType(ParserRuleContext node, Type expected) {
+	private boolean checkType(ParserRuleContext node, Type expected) {
 		Type actual = getType(node);
 		if (actual == null) {
-			throw new IllegalArgumentException("Missing inferred type of "
-					+ node.getText());
+			addError(node, "Missing inferred type of " + node.getText());
+			return false;
 		}
-		if (!actual.equals(expected)) {
+		if (!actual.getClass().equals(expected.getClass())) {
 			addError(node, "Expected type '%s' but found '%s'", expected,
 					actual);
+			return false;
 		}
+		
+		return true;
 	}
 
 	/** Records an error at a given parse tree node.
@@ -290,18 +331,5 @@ public class Checker extends BurritoBaseListener {
 	/** Returns the type of a given expression or type node. */
 	private Type getType(ParseTree node) {
 		return this.result.getType(node);
-	}
-
-	/** Convenience method to add a flow graph entry to the result. */
-	private void setEntry(ParseTree node, ParserRuleContext entry) {
-		if (entry == null) {
-			throw new IllegalArgumentException("Null flow graph entry");
-		}
-		this.result.setEntry(node, entry);
-	}
-
-	/** Returns the flow graph entry of a given expression or statement. */
-	private ParserRuleContext entry(ParseTree node) {
-		return this.result.getEntry(node);
 	}
 }
