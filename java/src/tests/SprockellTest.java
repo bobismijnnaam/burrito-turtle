@@ -64,8 +64,18 @@ public class SprockellTest {
 			+ "x|;"
 			+ "y|;"
 			+ "z|;"
+			+ "bool a = false;"
+			+ "bool b = false;"
+			+ "bool c = false;"
+			+ "a|;"
+			+ "b|;"
+			+ "c|;"
+			+ "a = true; b = false; c = a ^ b;"
+			+ "a|;"
+			+ "b|;"
+			+ "c|;"
 			;
-		String output = "000341223421";
+		String output = "000341223421falsefalsefalsetruefalsetrue";
 		
 		String result = compileAndRun(testProgram);
 		

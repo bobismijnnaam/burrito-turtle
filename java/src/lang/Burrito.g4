@@ -12,12 +12,12 @@ stat: type ID ASS expr SEMI				#typeAssignStat
 	| expr IO newlines SEMI				#outStat
 	;
 
-block: stat*; 
+block: stat*;
 
 target: ID								#idTarget
 	| ID LBRA expr RBRA					#arrayTarget
 	;
-
+ 
 expr: NOT expr			#notExpr
 	| expr DIV expr		#divExpr
 	| expr MUL expr		#mulExpr
@@ -30,6 +30,9 @@ expr: NOT expr			#notExpr
 	| expr GT expr		#gtExpr
 	| expr LTE expr		#lteExpr
 	| expr GTE expr		#gteExpr
+	| expr AND expr		#andExpr
+	| expr OR expr		#orExpr
+	| expr XOR expr		#xorExpr
 	| LPAR expr RPAR	#parExpr
 	| ID				#idExpr
 	| NUM				#numExpr
