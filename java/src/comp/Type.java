@@ -6,6 +6,10 @@ abstract public class Type {
 	/** returns the size (in bytes) of a value of this type. */
 	abstract public int size();
 	
+	public boolean equals(Type other) {
+		return this.getClass().equals(other.getClass());
+	}
+	
 	static public class Bool extends Type {
 		@Override
 		public int size() {
@@ -48,5 +52,6 @@ abstract public class Type {
 		public String toString() {
 			return "Array";
 		}
+		
 	}
 }

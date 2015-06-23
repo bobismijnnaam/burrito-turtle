@@ -23,6 +23,7 @@ import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinExprContext;
 import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulExprContext;
+import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
@@ -107,6 +108,12 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitNumExpr(NumExprContext ctx) {
+		setType(ctx, new Type.Int());
+	}
+	
+	@Override
+	public void exitNegExpr(NegExprContext ctx) {
+		checkType(ctx.expr(), new Type.Int());
 		setType(ctx, new Type.Int());
 	}
 	
@@ -286,7 +293,7 @@ public class Checker extends BurritoBaseListener {
 			addError(node, "Missing inferred type of " + node.getText());
 			return false;
 		}
-		if (!actual.getClass().equals(expected.getClass())) {
+		if (!actual.equals(expected)) {
 			addError(node, "Expected type '%s' but found '%s'", expected,
 					actual);
 			return false;

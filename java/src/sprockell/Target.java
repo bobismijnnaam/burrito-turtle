@@ -25,18 +25,22 @@ public class Target extends Operand {
 		this.label = label;
 	}
 	
-	public void fixLabel(Map<String, Integer> labelMap) {
+	public boolean fixLabel(Map<String, Integer> labelMap) {
 		if (target == Form.Lbl) {
 			if (!labelMap.containsKey(label)) {
 				System.out.println(labelMap);
 				System.out.println("Undefined label \"" + label + "\" found");
+				return false;
 			} else {
 				int dst = labelMap.get(label);
 				
 				target = Form.Abs;
 				codeAddr = new CodeAddr(dst);
 				label = null;
+				return true;
 			}
+		} else {
+			return true;
 		}
 	}
 	

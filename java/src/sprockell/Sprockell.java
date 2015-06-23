@@ -1,12 +1,23 @@
 package sprockell;
 
-import static sprockell.Operand.Type.REG;
-import static sprockell.Operand.Type.MEMADDR;
-import static sprockell.Operand.Type.TARGET;
-import static sprockell.Operand.Type.OPERATOR;
-import static sprockell.Operand.Type.VALUE;
-import static sprockell.Operand.Type.STRING;
+import static sprockell.Operand.Type.*;
+import lang.BurritoLexer;
+import lang.BurritoParser;
+
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.Lexer;
+import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
 import sprockell.Operand.Type;
+
+import comp.Checker;
+import comp.ErrorListener;
+import comp.Generator;
+import comp.ParseException;
+import comp.Result;
 
 public class Sprockell {
 	
@@ -48,6 +59,49 @@ public class Sprockell {
 		private Op(int arguments, Operand.Type... sig) {
 			this.arguments = arguments;
 			this.sig = sig;
+		}
+	}
+	
+	public static Program compile(String progStr) {
+		CharStream input = new ANTLRInputStream(progStr);
+		
+		ErrorListener listener = new ErrorListener();
+
+		Lexer lexer = new BurritoLexer(input);
+		lexer.removeErrorListeners();
+		lexer.addErrorListener(listener);
+
+		TokenStream tokens = new CommonTokenStream(lexer);
+		BurritoParser parser = new BurritoParser(tokens);
+		ParseTree result = parser.program();
+		parser.removeErrorListeners();
+		parser.addErrorListener(listener);
+		
+		Checker checker = new Checker();
+		Generator generator = new Generator();
+
+		try {
+			Result checkResult = checker.check(result);
+			Program prog = generator.generate(result, checkResult);
+
+			// If errors, an exception will be thrown
+			listener.throwException();
+
+			if (!prog.isWellFormed()) {
+				System.out.println("Program is not well formed");
+				return null;
+			}
+			
+			if (!prog.fixLabels()) {
+				System.out.println("There were missing labels");
+				return null;
+			}
+			
+			return prog;
+		} catch (ParseException e) {
+			e.printStackTrace();
+			System.out.println("Something went wrong");
+			return null;
 		}
 	}
 }

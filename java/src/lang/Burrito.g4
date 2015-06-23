@@ -9,6 +9,7 @@ stat: type ID ASS expr SEMI				#typeAssignStat
 	| expr IF block (ELSE block)? END	#ifStat
 	| expr WHILE block END				#whileStat
 	| type ID SEMI						#typeStat
+	| expr IO newlines SEMI				#outStat
 	;
 
 block: stat*;
@@ -34,9 +35,12 @@ expr: NOT expr			#notExpr
 	| NUM				#numExpr
 	| TRUE				#trueExpr
 	| FALSE 			#falseExpr
+	| MIN expr			#negExpr
 	;
 
 type: INT	#intType 
 	| type LBRA NUM RBRA #arrayType
 	| BOOL 	#boolType
 	;
+	
+newlines: IONL*;

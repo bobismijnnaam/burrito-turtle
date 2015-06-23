@@ -10,6 +10,42 @@ prog = [ Const 6 RegA
        , Write RegC stdio
        , IntCopy RegC RegD
        , Write RegD stdio
+       , Const 180 RegA
+       , Const 2 RegB
+       , Compute Div RegA RegB RegA
+       , Write RegA stdio
+       , Const 179 RegA
+       , Compute Div RegA RegB RegA
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Write RegA stdio
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
+       , Nop
        , EndProg
        ]
 

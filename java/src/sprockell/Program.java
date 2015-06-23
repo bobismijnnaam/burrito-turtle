@@ -95,10 +95,10 @@ public class Program {
 	public boolean isWellFormed() {
 		for (int i = 0; i < instr.size(); i++) {
 			if (!checkArgLength(instr.get(i))) {
-				System.out.printf("Arg length does not match [line %i].\n", i);
+				System.out.println("Arg length does not match [line " + i + "]");
 				return false;
 			} else if (!checkArgTypes(instr.get(i))) {
-				System.out.printf("Argument types do not match [line %i].\n", i);
+				System.out.println("Argument types do not match [line " + i + "]");
 				return false;
 			}
 		}
@@ -122,8 +122,6 @@ public class Program {
 		writer.println("main = run 1 prog");
 		
 		writer.close();
-		
-		System.out.printf("Written to file succesfully!\n ->[%s]\n", fileName);
 	}
 	
 	/**
@@ -151,10 +149,13 @@ public class Program {
 	
 	/**
 	 * Does label subsitution. Actually changes arguments in said program, so if you want to keep the original around make a copy!
+	 * @return True if all labels were properly defined, false if not.
 	 */
-	public void fixLabels() {
+	public boolean fixLabels() {
+		boolean result = true;
 		for (Instr inst : instr) {
-			inst.fixLabel(labelMap);
+			result = inst.fixLabel(labelMap) && result;
 		}
+		return result;
 	}
 }

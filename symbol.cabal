@@ -25,3 +25,8 @@ executable SimpleTest1
   build-depends:  base, containers, random, array
   main-is:        simpleTest.hs
   hs-source-dirs: sprockell\src .
+
+executable StdOutTest
+  build-depends:  base, containers, random, array
+  main-is:        stdoutTest.hs
+  hs-source-dirs: sprockell\src .

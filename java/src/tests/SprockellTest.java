@@ -6,8 +6,10 @@ import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
 
 import java.io.FileNotFoundException;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 import lang.BurritoLexer;
 import lang.BurritoParser;
@@ -24,6 +26,7 @@ import sprockell.MemAddr;
 import sprockell.Operator;
 import sprockell.Program;
 import sprockell.Reg;
+import sprockell.Sprockell;
 import sprockell.Target;
 import sprockell.Value;
 import comp.Checker;
@@ -34,57 +37,142 @@ import comp.Result;
 public class SprockellTest {
 	
 	@Test
-	public void sprockellTest() {
-		Program prog = new Program();
-		prog.emit(Const, new Value(2), new Reg(RegA));
-		prog.emit(Const, new Value(3), new Reg(RegB));
-		prog.emit("Ruben's Dan examen!!", Compute, new Operator(Add), new Reg(RegA), new Reg(RegB), new Reg(RegC));
-		prog.emit(Jump, new Target("Ruben's Dan examen!!"));
-		prog.emit(Write, new Reg(RegC), new MemAddr("stdio"));
-		prog.emit(EndProg);
+	public void simplePipe() {
+		String testProgram = "12345|; 0|; 987654321|; -98765432|; -12345999|; -0|; true|; false|;";
+		String output = "123450987654321-98765432-123459990truefalse";
 		
-		assertTrue(prog.isWellFormed());
+		String result = compileAndRun(testProgram);
 		
-		System.out.println("Before subsitution: ");
-		System.out.println(prog.prettyString(0, true));
-		System.out.println("After subsitution");
-		prog.fixLabels();
-		System.out.println(prog.prettyString(0, false));
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result);
 	}
 	
 	@Test
-	public void generatorTest() {
-		String testProgram = "int a = 1; int b = 2; int c = 1; c = a + b; c < 3 ? c = 3; ! c = c * 2; .";
-
-		CharStream input = new ANTLRInputStream(testProgram);
+	public void simpleArithmatic() {
+		String testProgram = ""
+			+ "int x = 0;"
+			+ "int y = 0;"
+			+ "int z = 0;"
+			+ "x|;"
+			+ "y|;"
+			+ "z|;"
+			+ "x = 3; y = 4; z = x * y;"
+			+ "x|;"
+			+ "y|;"
+			+ "z|;"
+			+ "x = 23; y = 42; z = y / x;"
+			+ "x|;"
+			+ "y|;"
+			+ "z|;"
+			;
+		String output = "000341223421";
 		
-//		ErrorListener listener = new ErrorListener();
-		Lexer lexer = new BurritoLexer(input);
-//		lexer.removeErrorListeners();
-//		lexer.addErrorListener(listener);
-		TokenStream tokens = new CommonTokenStream(lexer);
-		BurritoParser parser = new BurritoParser(tokens);
-//		parser.removeErrorListeners();
-//		parser.addErrorListener(listener);
-		ParseTree result = parser.program();
-//		listener.throwException();
-		Checker checker = new Checker();
-		Generator generator = new Generator();
+		String result = compileAndRun(testProgram);
+		
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result);
+	}
+	
+	@Test
+	public void simpleWhile() {
+		String testProgram = ""
+			+ "int i = 0;"
+			+ "i < 10 @"
+			+ "	i|;"
+			+ "	i = i + 1;"
+			+ "."
+			;
+		String output = "0123456789";
+		
+		String result = compileAndRun(testProgram);
+		
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result);
+	}
+	
+	@Test
+	public void simpleIf() {
+		String testProgram = ""
+			+ "int a = 4;"
+			+ "int b = 3;"
+			+ "a > b ?"
+			+ "	true|;"
+			+ "	b < 1 ?"
+			+ "		true|;"
+			+ "	!"
+			+ "		false|;"
+			+ "	."
+			+ "!"
+			+ "	false|;"
+			+ "."
+			;
+		String output = "truefalse";
+		
+		String result = compileAndRun(testProgram);
+		
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result);
+	}
+	
+	@Test
+	public void simpleDoublePipe() {
+		String testProgram = ""
+			+ "int a = 4;"
+			+ "int b = 5;"
+			+ "a|;"
+			+ "a|\\;"
+			+ "b|\\\\;"
+			+ "b|\\\\\\;"
+			+ "0|;"
+			;
+		String output = "44\n5\n\n5\n\n\n0";
+
+		String result = compileAndRun(testProgram).replaceAll("\r\n", "\n");
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result);
+	}
+	
+	@Test
+	public void simpleLogic() {
+		// TODO: When logic is implemented we'll implement this
+		assertTrue(false);
+	}
+	
+	public static String compileAndRun(String progStr) {
+		Program prog = Sprockell.compile(progStr);
+		
+		if (prog == null) {
+			System.out.println("There were errors");
+			return null;
+		}
+	
 		try {
-			Result checkResult = checker.check(result);
-			Program prog = generator.generate(result, checkResult);
-			System.out.println("Compiled program: \n");
-			System.out.println(prog.prettyString(0, true));
-			System.out.println("\nLabels fixed: \n");
-			prog.fixLabels();
-			System.out.println(prog.prettyString(0, true));
-			prog.writeToFile("simpleTest.hs");
-		} catch (ParseException e) {
-			e.printStackTrace();
-			System.out.println("Something went wrong");
+			prog.writeToFile("test.hs");
+			
+			Runtime rt = Runtime.getRuntime();
+			Process buildPr = rt.exec("ghc -i../sprockell/src -e main test.hs");
+			buildPr.waitFor();
+			
+			InputStream is = buildPr.getInputStream();
+			
+			Scanner s = new Scanner(is).useDelimiter("\\A");
+		    return s.hasNext() ? s.next() : null;
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.out.println("File not found");
+			return null;
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("IO Exception");
+			return null;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			System.out.println("We got interrupted");
+			return null;
+		} catch (NoSuchElementException e) {
+			e.printStackTrace();
+			System.out.println("Stream was empty");
+			return null;
 		}
 	}
 }
