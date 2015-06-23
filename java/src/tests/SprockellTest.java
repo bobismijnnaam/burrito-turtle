@@ -127,16 +127,24 @@ public class SprockellTest {
 			;
 		String output = "44\n5\n\n5\n\n\n0";
 
-		String result = compileAndRun(testProgram).replaceAll("\r\n", "\n");
+		String result = compileAndRun(testProgram);
 		
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(output, result);
+		assertEquals(output, result.replaceAll("\r\n", "\n"));
 	}
 	
 	@Test
-	public void simpleLogic() {
-		// TODO: When logic is implemented we'll implement this
-		assertTrue(false);
+	public void comments() {
+		String[] testPrograms = {"-- A comment",
+		"int a = 3; -- Another comment",
+		"int a = 3;\n-- Yet another comment",
+		"{A weird comment}int a{Everywhere} = 5;{We don't mind them}",
+		"-- They can be combined as well\nint a {See?} = 5; -- No worries!"};
+		
+		for (String s : testPrograms) {
+			String result = compileAndRun(s);
+			assertNotNull("Test went wrong:\n" + s, result);
+		}
 	}
 	
 	public static String compileAndRun(String progStr) {
@@ -157,7 +165,7 @@ public class SprockellTest {
 			InputStream is = buildPr.getInputStream();
 			
 			Scanner s = new Scanner(is).useDelimiter("\\A");
-		    return s.hasNext() ? s.next() : null;
+		    return s.hasNext() ? s.next() : "";
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			System.out.println("File not found");

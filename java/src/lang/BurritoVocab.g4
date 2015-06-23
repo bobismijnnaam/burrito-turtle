@@ -23,15 +23,12 @@ ELSE: '!';
 IF: '?';
 WHILE: '@';
 IO: '|';
-IONL: '\\';
+IONL: '\\'; // This is just ONE backslash! Antlr wants each backslash escaped with backslash
 SCOPE: '#';
 END: '.';
 SEMI: ';';
-COMM: '--';
-COMMB: '{';
-COMME: '}';
 LPAR: '(';
-RPAR: ')';
+RPAR: ')'; 
 
 AND: '&&';
 OR: '||';
@@ -48,6 +45,8 @@ NUM: [1-9] DIGIT* | '0';
 
 ID: LETTER (LETTER | DIGIT)*;
 
+ONELINECOMMENT: '--' (~('\r'|'\n'))* -> skip;
+MULTILINECOMMENT: '{' .*? '}' -> skip; 
 WS: [ \t\r\n]+ -> skip;
 
 fragment LETTER: [a-zA-Z];

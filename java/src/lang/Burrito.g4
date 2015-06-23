@@ -2,7 +2,7 @@ grammar Burrito;
 
 import BurritoVocab;
 
-program: stat*;
+program: stat*; 
 
 stat: type target ASS expr SEMI			#typeStat
 	| target ASS expr SEMI				#assStat
@@ -11,9 +11,9 @@ stat: type target ASS expr SEMI			#typeStat
 	| expr IO newlines SEMI				#outStat
 	;
 
-block: stat*;
+block: stat*; 
 
-target: ID;
+target: ID; 
 
 expr: NOT expr			#notExpr
 	| expr DIV expr		#divExpr
