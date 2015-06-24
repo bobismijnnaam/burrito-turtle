@@ -5,7 +5,9 @@ import static sprockell.Operator.Which.*;
 import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.NoSuchElementException;
@@ -36,119 +38,80 @@ import comp.Result;
 
 public class SprockellTest {
 	
+	private final static String BASE_DIR = "src/tests/testfiles";
+	private final static String EXT = ".symbol";
+	
 	@Test
 	public void simplePipe() {
-		String testProgram = "12345|; 0|; 987654321|; -98765432|; -12345999|; -0|; true|; false|;";
 		String output = "123450987654321-98765432-123459990truefalse";
-		
-		String result = compileAndRun(testProgram);
-		
+		String result = compileAndRunFile("SimplePipe");
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result);
 	}
 	
 	@Test
 	public void simpleArithmatic() {
-		String testProgram = ""
-			+ "int x = 0;"
-			+ "int y = 0;"
-			+ "int z = 0;"
-			+ "x|;"
-			+ "y|;"
-			+ "z|;"
-			+ "x = 3; y = 4; z = x * y;"
-			+ "x|;"
-			+ "y|;"
-			+ "z|;"
-			+ "x = 23; y = 42; z = y / x;"
-			+ "x|;"
-			+ "y|;"
-			+ "z|;"
-			;
-		String output = "000341223421";
-		
-		String result = compileAndRun(testProgram);
-		
+		String output = "000341223421falsefalsefalsetruefalsetrue";
+		String result = compileAndRunFile("SimpleArithmatic");
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result);
 	}
 	
 	@Test
 	public void simpleWhile() {
-		String testProgram = ""
-			+ "int i = 0;"
-			+ "i < 10 @"
-			+ "	i|;"
-			+ "	i = i + 1;"
-			+ "."
-			;
 		String output = "0123456789";
-		
-		String result = compileAndRun(testProgram);
-		
+		String result = compileAndRunFile("SimpleWhile");
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result);
 	}
 	
 	@Test
 	public void simpleIf() {
-		String testProgram = ""
-			+ "int a = 4;"
-			+ "int b = 3;"
-			+ "a > b ?"
-			+ "	true|;"
-			+ "	b < 1 ?"
-			+ "		true|;"
-			+ "	!"
-			+ "		false|;"
-			+ "	."
-			+ "!"
-			+ "	false|;"
-			+ "."
-			;
 		String output = "truefalse";
-		
-		String result = compileAndRun(testProgram);
-		
+		String result = compileAndRunFile("SimpleIf");
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result);
 	}
 	
 	@Test
-	public void simpleDoublePipe() {
-		String testProgram = ""
-			+ "int a = 4;"
-			+ "int b = 5;"
-			+ "a|;"
-			+ "a|\\;"
-			+ "b|\\\\;"
-			+ "b|\\\\\\;"
-			+ "0|;"
-			;
+	public void simpleOutBackslash() {
 		String output = "44\n5\n\n5\n\n\n0";
-
-		String result = compileAndRun(testProgram).replaceAll("\r\n", "\n");
+		String result = compileAndRunFile("SimpleOutBackSlash");
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(output, result);
+		assertEquals(output, result.replaceAll("\r\n", "\n"));
 	}
 	
 	@Test
-	public void arrayTest() {
-		String testProgram = ""
-				+ "int x = 0;"
-				+ "int[100] z;"
-				+ "x < 100 @"
-				+ "z[x] = x;"
-				+ "z[x]|;"
-				+ "x = x + 1;"
-				+ "."
-				;
-		String result = compileAndRun(testProgram);
-		System.out.println(result);
+	public void simpleArray() {
+		String result = compileAndRunFile("SimpleArray");
+		String output = "012345678901112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result.replaceAll("\r\n", "\n"));
+	}
+	
+	@Test
+	public void comments() {
+		String result = compileAndRunFile("Comments");
+		assertNotNull("Compiling or executing went wrong", result);
 	}
 	
 	public static String compileAndRun(String progStr) {
-		Program prog = Sprockell.compile(progStr);
+		return compileAndRun(new ANTLRInputStream(progStr));
+	}
+	
+	public static String compileAndRunFile(String filename) {
+		try {
+			return compileAndRun(new ANTLRInputStream(new FileReader(new File(BASE_DIR, filename + EXT))));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static String compileAndRun(ANTLRInputStream input) {
+		Program prog = Sprockell.compile(input);
 		
 		if (prog == null) {
 			System.out.println("There were errors");
@@ -165,7 +128,7 @@ public class SprockellTest {
 			InputStream is = buildPr.getInputStream();
 			
 			Scanner s = new Scanner(is).useDelimiter("\\A");
-		    return s.hasNext() ? s.next() : null;
+		    return s.hasNext() ? s.next() : "";
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			System.out.println("File not found");

@@ -125,8 +125,8 @@ public class CheckerTest {
 		
 		assertEquals(true, checker.hasErrors());
 		
-		// array expr not a num initialized
-		testProgram = "bool[7] x; x[5+false]|; int z = 0; int[5] y; int p = 0;";
+		// array expr not a num as index
+		testProgram = "bool[7] x; x[false]|; int z = 0; int[5] y; int p = 0;";
 		result = parse(testProgram);
 		checker = new Checker();
 		try {
@@ -139,9 +139,7 @@ public class CheckerTest {
 		} catch (ParseException e) {
 		}
 		
-		for (String error : checker.getErrors()) {
-			System.out.println(error);
-		}
+		assertEquals(true, checker.hasErrors());
 	}
 	
 	private ParseTree parse(String testProgram) {

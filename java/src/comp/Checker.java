@@ -5,6 +5,7 @@ import java.util.List;
 
 import lang.BurritoBaseListener;
 import lang.BurritoParser.ArrayExprContext;
+import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
@@ -26,6 +27,7 @@ import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NumExprContext;
+import lang.BurritoParser.OrExprContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
@@ -33,6 +35,7 @@ import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
 import lang.BurritoParser.WhileStatContext;
+import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
@@ -87,14 +90,12 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitIdTarget(IdTargetContext ctx) {
 		setType(ctx, scope.type(ctx.ID().getText()));
-		setOffset(ctx.ID(), scope.offset(ctx.ID().getText()));
 	}
 	
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
 		setType(ctx, scope.type(ctx.ID().getText()));
 		checkType(ctx.expr(), new Type.Int());
-		setOffset(ctx.ID(), scope.offset(ctx.ID().getText()));
 	}
 	
 	// EXPR -----------------------------
@@ -168,6 +169,21 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitGteExpr(GteExprContext ctx) {
 		checkTypeCompare(ctx); 
+	}
+	
+	@Override
+	public void exitAndExpr(AndExprContext ctx) {
+		checkTypeCompare(ctx);
+	}
+	
+	@Override
+	public void exitOrExpr(OrExprContext ctx) {
+		checkTypeCompare(ctx);
+	}
+	
+	@Override
+	public void exitXorExpr(XorExprContext ctx) {
+		checkTypeCompare(ctx);
 	}
 	
 	void checkTypeCompare(ParserRuleContext ctx) {

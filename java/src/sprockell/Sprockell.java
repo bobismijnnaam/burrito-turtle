@@ -62,9 +62,11 @@ public class Sprockell {
 		}
 	}
 	
-	public static Program compile(String progStr) {
-		CharStream input = new ANTLRInputStream(progStr);
-		
+	public static Program compile(String input) {
+		return compile(new ANTLRInputStream(input));
+	}
+	
+	public static Program compile(ANTLRInputStream input) {
 		ErrorListener listener = new ErrorListener();
 
 		Lexer lexer = new BurritoLexer(input);

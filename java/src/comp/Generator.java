@@ -10,6 +10,7 @@ import java.util.List;
 import lang.BurritoBaseVisitor;
 import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
+import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.DivExprContext;
@@ -28,6 +29,7 @@ import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NotExprContext;
 import lang.BurritoParser.NumExprContext;
+import lang.BurritoParser.OrExprContext;
 import lang.BurritoParser.OutStatContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusExprContext;
@@ -38,6 +40,7 @@ import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
 import lang.BurritoParser.WhileStatContext;
+import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -55,14 +58,10 @@ import sprockell.Value;
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private Program prog;
 	private Result checkResult;
-	private ParseTreeProperty<Reg> regs;
-	private ParseTreeProperty<String> labels;
 
 	public Program generate(ParseTree tree, Result checkResult) {
 		this.prog = new Program();
 		this.checkResult = checkResult;
-		this.regs = new ParseTreeProperty<>();
-		this.labels = new ParseTreeProperty<>();
 		tree.accept(this);
 		return this.prog;
 	}
@@ -268,6 +267,21 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	@Override
 	public List<Instr> visitGteExpr(GteExprContext ctx) {
 		return emitArOp(ctx, GtE);
+	}
+	
+	@Override
+	public List<Instr> visitAndExpr(AndExprContext ctx) {
+		return emitArOp(ctx, And);
+	}
+	
+	@Override
+	public List<Instr> visitOrExpr(OrExprContext ctx) {
+		return emitArOp(ctx, Or);
+	}
+	
+	@Override
+	public List<Instr> visitXorExpr(XorExprContext ctx) {
+		return emitArOp(ctx, Xor);
 	}
 	
 	@Override

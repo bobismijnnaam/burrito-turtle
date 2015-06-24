@@ -1,0 +1,13 @@
+int a = 4;
+int b = 3;
+
+a > b ?
+	true|;
+	b < 1 ?
+		true|;
+	!
+		false|;
+	.
+!
+	false|;
+.
