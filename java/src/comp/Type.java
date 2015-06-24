@@ -1,5 +1,8 @@
 package comp;
 
+import java.util.ArrayList;
+import java.util.List;
+
 abstract public class Type {
 	public static final int INT_SIZE = 1;
 	
@@ -37,10 +40,12 @@ abstract public class Type {
 	static public class Array extends Type {
 		public Type elemType;
 		private int size;
+		public List<Integer> indexSize;
 		
 		public Array(Type elemType, int size) {
 			this.elemType = elemType;
 			this.size = size;
+			this.indexSize = new ArrayList<Integer>();
 		}
 
 		@Override

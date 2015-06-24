@@ -1,11 +1,12 @@
 package comp;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import lang.BurritoBaseListener;
-import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.AndExprContext;
+import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
@@ -13,6 +14,7 @@ import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.BoolTypeContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
+import lang.BurritoParser.ExprContext;
 import lang.BurritoParser.FalseExprContext;
 import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
@@ -84,7 +86,20 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitArrayType(ArrayTypeContext ctx) {
-		setType(ctx, new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText())));
+		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
+		if (getType(ctx.type()).toString().equals("Array")) {
+			Type.Array innerArray = (Array) getType(ctx.type());
+			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
+		}
+		
+		array.indexSize.add(new Integer(ctx.NUM().getText()));
+		setType(ctx, array);
+		
+		/*
+		System.out.println(ctx.getText());
+		for (int index : array.indexSize) {
+			System.out.println(index);
+		}*/
 	}
 	
 	@Override
@@ -94,8 +109,19 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
-		setType(ctx, scope.type(ctx.ID().getText()));
-		checkType(ctx.expr(), new Type.Int());
+		String id = ctx.ID().getText();
+		id = id.split("\\[")[0];
+		Type.Array array = (Array) this.scope.type(id);
+
+		if (array == null) {
+			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+		} else {
+			setType(ctx.ID(), array);
+			setType(ctx, array.elemType);
+			setOffset(ctx.ID(), this.scope.offset(id));
+			for (ExprContext expr : ctx.expr())
+				checkType(expr, new Type.Int());
+		}
 	}
 	
 	// EXPR -----------------------------
@@ -139,10 +165,20 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.ID().getText();
 		id = id.split("\\[")[0];
 		Type.Array array = (Array) this.scope.type(id);
-		setType(ctx.ID(), array);
-		setType(ctx, array.elemType);
-		setOffset(ctx.ID(), this.scope.offset(id));
-		checkType(ctx.expr(), new Type.Int());
+		if (array == null) {
+			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+		} else {
+			setType(ctx.ID(), array);
+			
+			while (array.elemType.toString().equals("Array")) {
+					array = (Array) array.elemType;
+			}
+			
+			setType(ctx, array.elemType);
+			setOffset(ctx.ID(), this.scope.offset(id));
+			for (ExprContext expr : ctx.expr())
+				checkType(expr, new Type.Int());
+		}
 	}
 	
 	// TODO , By compare check if it is a type that can be compared
@@ -249,7 +285,7 @@ public class Checker extends BurritoBaseListener {
 		Type type = result.getType(ctx.type());
 		
 		if (ctx.getChildCount() > 0) {
-			scope.put(id, type, new Integer(ctx.type().getChild(2).getText()));
+			scope.put(id, type, type.size());
 		} else {
 			scope.put(id, type);
 		}
@@ -257,6 +293,7 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx.ID(), type);		
 		setOffset(ctx.ID(), scope.offset(id));
 	}
+
 	
 	@Override
 	public void exitWhileStat(WhileStatContext ctx) {
@@ -276,8 +313,12 @@ public class Checker extends BurritoBaseListener {
 		if (id.contains("[")) {
 			id = id.split("\\[")[0];
 			Type.Array array = (Array) this.scope.type(id);
-			if (array != null)
+			if (array != null) {
 				type = array.elemType;
+				while (type.toString().equals("Array")) {
+					type = ((Type.Array) type).elemType;
+				}
+			}
 		}
 		
 		if (type != null) {

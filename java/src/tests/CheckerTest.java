@@ -79,7 +79,7 @@ public class CheckerTest {
 		try {
 			Result checkResult = checker.check(result);
 			assertEquals(new Type.Array(new Type.Bool(), 6).getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
-			assertEquals(new Type.Array(new Type.Bool(), 6).getClass(), checkResult.getType(result.getChild(1).getChild(0)).getClass());
+			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(1).getChild(0)).getClass());
 			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(1).getChild(2)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -126,20 +126,32 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// array expr not a num as index
-		testProgram = "bool[7] x; x[false]|; int z = 0; int[5] y; int p = 0;";
+		testProgram = "bool[7] x; x[0] = true; x[false]|; int z = 0; int[5] y; int p = 0;";
+		//testProgram = "bool[7][8] x; x[0][0] = 0;";
 		result = parse(testProgram);
 		checker = new Checker();
 		try {
 			Result checkResult = checker.check(result);
-			System.out.println("Bool[5] x: "+ checkResult.getOffset(result.getChild(0).getChild(1)));
-			System.out.println("x: "+ checkResult.getOffset(result.getChild(1).getChild(0)));
-			System.out.println("Int z: "+ checkResult.getOffset(result.getChild(2).getChild(1)));
-			System.out.println("Int[5] y: "+ checkResult.getOffset(result.getChild(3).getChild(1)));
-			System.out.println("Int p: "+ checkResult.getOffset(result.getChild(4).getChild(1)));
 		} catch (ParseException e) {
 		}
 		
 		assertEquals(true, checker.hasErrors());
+	}
+	
+	@Test public void multiDimArrayTest() {
+		String testProgram = "bool[3][2][6][2][3] i; int x = 0;";
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(216, checkResult.getOffset(result.getChild(1).getChild(1)));
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		for (String error : checker.getErrors()) {
+			System.out.println(error);
+		}
 	}
 	
 	private ParseTree parse(String testProgram) {

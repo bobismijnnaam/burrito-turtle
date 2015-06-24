@@ -5,6 +5,7 @@ import static sprockell.Program.mkLbl;
 import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
 
+import java.util.Collections;
 import java.util.List;
 
 import lang.BurritoBaseVisitor;
@@ -15,6 +16,7 @@ import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
+import lang.BurritoParser.ExprContext;
 import lang.BurritoParser.FalseExprContext;
 import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
@@ -107,16 +109,27 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitArrayTarget(ArrayTargetContext ctx) {
-		visit(ctx.expr());
+		for (ExprContext expr : ctx.expr()) {
+			visit(expr);
+			prog.emit(Push, new Reg(RegE));
+		}
 		
-		Type.Array array = (Array) checkResult.getType(ctx);
+		Array array = (Array) checkResult.getType(ctx.ID());
+		prog.emit(Const, new Value(0), new Reg(RegC));
 		
-		// Get offset from ctx.ID() in RegD
+		int size = 1;
+		for (int i = array.indexSize.size() - 1; i >= 0; i--) {
+			prog.emit(Pop, new Reg(RegE));
+			prog.emit(Const, new Value(size), new Reg(RegD));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
+			size *= array.indexSize.get(i);
+		}
+		
+		// Get offset from ctx.ID() in RegB
 		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
-		prog.emit(Const, new Value(array.size()), new Reg(RegD));
-		prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
 		// RegB + RegE -> RegE
-		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegE), new Reg(RegE));
+		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
 		return null;
 	}
 	
@@ -196,7 +209,26 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitArrayExpr(ArrayExprContext ctx) {
-		visit(ctx.expr());
+		for (ExprContext expr : ctx.expr()) {
+			visit(expr);
+			prog.emit(Push, new Reg(RegE));
+		}
+		
+		Array array = (Array) checkResult.getType(ctx.ID());
+		prog.emit(Const, new Value(0), new Reg(RegC));
+		
+		int size = 1;
+		for (int i = array.indexSize.size() - 1; i >= 0; i--) {
+			prog.emit(Pop, new Reg(RegE));
+			prog.emit(Const, new Value(size), new Reg(RegD));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
+			size *= array.indexSize.get(i);
+		}
+		
+		/*for (ExprContext expr : ctx.expr())
+			visit((ParseTree) expr);
+		
 		Type.Array array = (Array) checkResult.getType(ctx.ID());
 
 		// Get offset from ctx.ID() in RegD
@@ -204,11 +236,13 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Const, new Value(array.size()), new Reg(RegD));
 		prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
 		// RegB + RegE -> RegE
-		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegE), new Reg(RegE));
+		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegE), new Reg(RegE));*/
 		
 		// Waarde mem[arp + offset]
-		prog.emit(Compute, new Operator(Add), new Reg(RegA), new Reg(RegE), new Reg(RegB));
-		prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
+		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+		prog.emit(Compute, new Operator(Add), new Reg(RegA), new Reg(RegC), new Reg(RegB));
+		prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
 		return null;
 	}
 	

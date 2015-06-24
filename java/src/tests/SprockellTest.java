@@ -90,6 +90,26 @@ public class SprockellTest {
 	}
 	
 	@Test
+	public void multiDimArray() {
+		String result = compileAndRunFile("MultiDimArray");
+		
+		String output = "";
+		int[][][][] x = new int[2][2][2][2];
+		for (int a = 0; a < 2; a++) {
+			for (int b = 0; b < 2; b++) {
+				for (int c = 0; c < 2; c++) {
+					for (int d = 0; d < 2; d++) {
+						x[a][b][c][d] = a + b + c + d;
+						output += x[a][b][c][d];
+					}
+				}
+			}
+		}
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result.replaceAll("\r\n", "\n"));
+	}
+	
+	@Test
 	public void comments() {
 		String result = compileAndRunFile("Comments");
 		assertNotNull("Compiling or executing went wrong", result);
