@@ -171,7 +171,7 @@ public class SprockellTest {
 			Runtime rt = Runtime.getRuntime();
 			Process buildPr = rt.exec("ghc -i../sprockell/src -e main test.hs");
 			buildPr.waitFor();
-			
+
 			InputStream is = buildPr.getInputStream();
 			
 			Scanner s = new Scanner(is).useDelimiter("\\A");

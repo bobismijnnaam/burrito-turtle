@@ -2,6 +2,7 @@ package sprockell;
 
 import java.util.Map;
 
+import sprockell.Operand.Type;
 import sprockell.Sprockell.Op;
 
 public class Instr {
@@ -14,13 +15,22 @@ public class Instr {
 	}
 	
 	public boolean fixLabel(Map<String, Integer> labelMap) {
+		boolean result = true;
+		
 		if (op == Op.Branch) {
-			return ((Target) args[1]).fixLabel(labelMap);
+			result = ((Target) args[1]).fixLabel(labelMap) && result;
 		} else if (op == Op.Jump) {
-			return ((Target) args[0]).fixLabel(labelMap);
+			result = ((Target) args[0]).fixLabel(labelMap) && result;
 		}
 		
-		return true;
+		for (Operand arg : args) {
+			if (arg.getType() == Type.VALUE) {
+				Value val = (Value) arg;
+				result = val.fixLabel(labelMap) && result;
+			}
+		}
+		
+		return result;
 	}
 	
 	public String toString() {

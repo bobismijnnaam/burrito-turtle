@@ -5,6 +5,7 @@ import java.util.List;
 
 import lang.BurritoBaseListener;
 import lang.BurritoParser.AndExprContext;
+import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
@@ -13,6 +14,8 @@ import lang.BurritoParser.BoolTypeContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
 import lang.BurritoParser.FalseExprContext;
+import lang.BurritoParser.FuncContext;
+import lang.BurritoParser.FuncExprContext;
 import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
@@ -41,6 +44,8 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import sprockell.Program;
+
 import comp.Type.Array;
 
 public class Checker extends BurritoBaseListener {
@@ -68,6 +73,51 @@ public class Checker extends BurritoBaseListener {
 	
 	//*************************
 	// START OF TYPE CHECKING
+	
+	// FUNCTIONS ---------------------
+	
+	@Override
+	public void exitSig(lang.BurritoParser.SigContext ctx) {
+		String funcID = ctx.ID().getText(); // Get function ID
+		Type returnType = getType(ctx.type()); // Get return type
+		Type[] args = new Type[ctx.arg().size()]; // Aggregate argument types
+		for (int i = 0; i < ctx.arg().size(); i++) {
+			args[i] = getType(ctx.arg(i));
+			
+		}
+		String label = Program.mkLbl(ctx, "function_" + funcID); // Make a label
+
+		// Register the function
+		scope.putFunc(funcID, label, returnType, args);
+		// Push a scope, since we're going into function scope
+		scope.pushScope();
+		// Commit the pushed arguments, so they will be registered as well and are assigned
+		// a negative offset
+		scope.finishArgs();
+
+		setFunction(ctx.parent, scope.func(funcID)); // TODO: Is this needed/used?
+	};
+	
+	@Override
+	public void exitArg(ArgContext ctx) {
+		String argID = ctx.ID().getText();
+		Type argType = getType(ctx.type());
+
+		scope.putArg(argID, argType);
+
+		setType(ctx, argType);
+	}
+	
+	@Override
+	public void exitFunc(FuncContext ctx) {
+		scope.popScope();
+	}
+	
+	public void exitReturnStat(lang.BurritoParser.ReturnStatContext ctx) {
+		Function func = getFunction(ctx.parent);
+		checkType(ctx.expr(), func.returnType);
+		setStackSize(ctx, scope.getCurrentStackSize());
+	};
 	
 	// TYPES -------------------------
 	
@@ -218,6 +268,44 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx, new Type.Int());
 	}
 	
+	@Override
+	public void exitFuncExpr(FuncExprContext ctx) {
+		String funcID = ctx.ID().getText();
+		
+		// Check if function exists
+		if (!scope.containsFunc(funcID)) {
+			addError(ctx, "Function \"" + funcID + "\" not declared");
+			return;
+		}
+		
+		Function func = scope.func(funcID);
+		
+		// Check if argument length matches
+		if (func.args.length != ctx.expr().size()) {
+			addError(ctx, "Inappropriate amount of arguments in function call of \""
+					+ funcID 
+					+ "\". Expected " + func.args.length + ", received " + ctx.expr().size());
+			return;
+		}
+		
+		// Check if argument types match
+		for (int i = 0; i < ctx.expr().size(); i++) {
+			Type givenType = getType(ctx.expr(i));
+			Type expectedType = func.args[i];
+			if (!givenType.equals(expectedType)) {
+				addError(ctx, "Inappropriate type found for argument " + i + " in function call of \""
+						+ funcID
+						+ "\". Expected " + expectedType.toString() + ", but found " + givenType.toString());
+				return;
+			}
+		}
+		
+		// Set return type of function as expression type
+		// Set the function to the ID for the generator
+		setType(ctx, scope.func(funcID).returnType);
+		setFunction(ctx.ID(), scope.func(funcID));
+	}
+	
 	// STATS ----------------------------
 	@Override
 	public void exitTypeAssignStat(TypeAssignStatContext ctx) {
@@ -356,4 +444,17 @@ public class Checker extends BurritoBaseListener {
 	private Type getType(ParseTree node) {
 		return this.result.getType(node);
 	}
+	
+	private void setFunction(ParseTree node, Function function) {
+		this.result.setFunction(node, function);
+	}
+	
+	private Function getFunction(ParseTree node) {
+		return this.result.getFunction(node);
+	}
+
+	private void setStackSize(ParseTree node, int currentStackSize) {
+		this.result.setStackSize(node, currentStackSize);
+	}
+
 }

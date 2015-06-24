@@ -25,6 +25,34 @@ import comp.Type;
 public class CheckerTest {
 	
 	@Test
+	public void functionTests() {
+		String testProgram = "int add(int a, int b) <- a + b;. int program(bool x, bool y) int c = 3; int d = 4; <- add(c, d); .";
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+		
+		try {
+			Result checkResult = checker.check(result);
+			System.out.println(result.getChild(1).getChild(3).getChild(1).getText());
+			System.out.println(checkResult.getType(result.getChild(1).getChild(3).getChild(1)));
+		} catch (ParseException e) {
+		}
+
+//		testProgram = "int add(int a, int b) <- a + b;. int program(bool x, bool y) <- add(x, y); .";
+//		result = parse(testProgram);
+//		checker = new Checker();
+//		
+//		try {
+//			Result checkResult = checker.check(result);
+//			System.out.println(result.getChild(1).getChild(1).getChild(2).getChild(1).getText());
+//			System.out.println(checkResult.getType(result.getChild(1).getChild(1).getChild(2).getChild(1)));
+//		} catch (ParseException e) {
+//			e.printStackTrace();
+//		}
+//		
+//		System.out.println("Done");
+	}
+	
+	@Test
 	public void basicTests() {
 		// int assignment
 		String testProgram = "int i = 0;";

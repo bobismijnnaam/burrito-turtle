@@ -1,8 +1,9 @@
 package comp;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Stack;
 
 public class Scope {
@@ -14,10 +15,15 @@ public class Scope {
 	/** Map from declared variables to their offset within the allocation
 	 * record of this scope. */
 	private Map<String, Integer> offsets = new HashMap<String, Integer>();
+	private Map<String, Function> functions = new HashMap<String, Function>();
+	
+	private List<String> argList = new ArrayList<String>();
 	
 	private Stack<Integer> sizeStack = new Stack<Integer>();
 	private Stack<Map<String, Type>> typeStack = new Stack<Map<String, Type>>();
 	private Stack<Map<String, Integer>> offsetStack = new Stack<Map<String, Integer>>();
+	
+	// TODO: Implement function pushing popping
 	
 	/**
 	 * Pops the previous scope state off the stack, restoring previous sizes, type mappings, etc.
@@ -42,6 +48,10 @@ public class Scope {
 	 */
 	public boolean contains(String id) {
 		return this.types.containsKey(id);
+	}
+	
+	public boolean containsFunc(String id) {
+		return this.functions.containsKey(id);
 	}
 
 	/**
@@ -69,6 +79,43 @@ public class Scope {
 		}
 		return result;
 	}
+	
+	public boolean putFunc(String id, String label, Type returnType, Type... args) {
+		Function func = new Function();
+		func.id = id;
+		func.label = label;
+		func.args = args;
+		func.returnType = returnType;
+		
+		functions.put(id, func);
+		
+		return true;
+	}
+	
+	public boolean putArg(String id, Type type) {
+		types.put(id, type);
+		argList.add(id);
+		
+//		System.out.println("Registered " + id + " of type " + type);
+		
+		return true;
+	}
+	
+	public boolean finishArgs() {
+		int leftMargin = 0;
+		for (String id : argList) {
+			leftMargin -= type(id).size();
+		}
+		
+		for (String id : argList) {
+			offsets.put(id, leftMargin);
+			leftMargin += type(id).size();
+		}
+		
+		argList.clear();
+		
+		return true;
+	}
 
 	/**
 	 * Returns the type of a given (presumably declared) identifier.
@@ -76,13 +123,21 @@ public class Scope {
 	public Type type(String id) {
 		return this.types.get(id);
 	}
+	
+	public Function func(String id) {
+		return this.functions.get(id);
+	}
 
 	/** 
 	 * Returns the offset of a given (presumably declared) identifier. 
 	 * with respect to the beginning of this scope's activation record.
 	 * Offsets are assigned in order of declaration. 
 	 */
-	public Integer offset(String id) {
+	public int offset(String id) {
 		return this.offsets.get(id);
+	}
+	
+	public int getCurrentStackSize() {
+		return size;
 	}
 }
