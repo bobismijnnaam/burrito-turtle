@@ -26,14 +26,14 @@ public class CheckerTest {
 	
 	@Test
 	public void functionTests() {
-		String testProgram = "int add(int a, int b) <- a + b;. int program(bool x, bool y) int c = 3; int d = 4; <- add(c, d); .";
+		String testProgram = "int add(int a, int b) <- a + b;. int program(bool x, bool y) int c = 3; int d = 4; <- add(c, d); . ";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
 		
 		try {
 			Result checkResult = checker.check(result);
-			System.out.println(result.getChild(1).getChild(3).getChild(1).getText());
-			System.out.println(checkResult.getType(result.getChild(1).getChild(3).getChild(1)));
+			//System.out.println(result.getChild(1).getChild(3).getChild(1).getText());
+			//System.out.println(checkResult.getType(result.getChild(1).getChild(3).getChild(1)));
 		} catch (ParseException e) {
 		}
 
@@ -55,21 +55,21 @@ public class CheckerTest {
 	@Test
 	public void basicTests() {
 		// int assignment
-		String testProgram = "int i = 0;";
+		String testProgram = "int program() int i = 0; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
-		
+
 		try {
 			Result checkResult = checker.check(result);
-			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
-			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(3)).getClass());
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(1)).getClass());
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(3)).getClass());
 		} catch (ParseException e) {
 		}
 		
 		assertEquals(false, checker.hasErrors());
 		
 		// int assignment but not inferred has 1 error
-		testProgram = "i = 0;";
+		testProgram = "int program() i = 0; .";
 		result = parse(testProgram);
 		checker = new Checker();
 		
@@ -83,7 +83,7 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// try to assign bool to int
-		testProgram = "int i = false;";
+		testProgram = "int program() int i = false; .";
 		result = parse(testProgram);
 		checker = new Checker();
 		
@@ -106,9 +106,10 @@ public class CheckerTest {
 		Checker checker = new Checker();
 		try {
 			Result checkResult = checker.check(result);
-			assertEquals(new Type.Array(new Type.Bool(), 6).getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
-			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(1).getChild(0)).getClass());
-			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(1).getChild(2)).getClass());
+			
+			assertEquals(new Type.Array(new Type.Bool(), 6).getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(0)).getClass());
+			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(2)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
@@ -116,7 +117,7 @@ public class CheckerTest {
 		assertEquals(false, checker.hasErrors());
 		
 		// assign wrong type to elem
-		testProgram = "int[6] i; i[4] = true;";
+		testProgram = "int program() int[6] i; i[4] = true; .";
 		result = parse(testProgram);
 		checker = new Checker();
 		try {
@@ -131,7 +132,7 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// array not initialized
-		testProgram = "i[1] = true;";
+		testProgram = "int program() i[1] = true; .";
 		result = parse(testProgram);
 		checker = new Checker();
 		try {
@@ -143,7 +144,7 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// array expr not a num initialized
-		testProgram = "bool[5] i; i[false] = true;";
+		testProgram = "int program() bool[5] i; i[false] = true; .";
 		result = parse(testProgram);
 		checker = new Checker();
 		try {
@@ -154,7 +155,7 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// array expr not a num as index
-		testProgram = "bool[7] x; x[0] = true; x[false]|; int z = 0; int[5] y; int p = 0;";
+		testProgram = "int program() bool[7] x; x[0] = true; x[false]|; int z = 0; int[5] y; int p = 0; .";
 		//testProgram = "bool[7][8] x; x[0][0] = 0;";
 		result = parse(testProgram);
 		checker = new Checker();
@@ -167,12 +168,13 @@ public class CheckerTest {
 	}
 	
 	@Test public void multiDimArrayTest() {
-		String testProgram = "bool[3][2][6][2][3] i; int x = 0;";
+		String testProgram = "int program() bool[3][2][6][2][3] i; int x = 0; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+
 		try {
 			Result checkResult = checker.check(result);
-			assertEquals(216, checkResult.getOffset(result.getChild(1).getChild(1)));
+			assertEquals(216, checkResult.getOffset(result.getChild(0).getChild(2).getChild(1)));
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
