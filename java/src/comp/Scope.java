@@ -86,11 +86,7 @@ public class Scope {
 	}
 	
 	public boolean putFunc(String id, String label, Type returnType, Type... args) {
-		Function func = new Function();
-		func.id = id;
-		func.label = label;
-		func.args = args;
-		func.returnType = returnType;
+		Function func = new Function(args, id, returnType, label);
 		
 		functions.put(id, func);
 		

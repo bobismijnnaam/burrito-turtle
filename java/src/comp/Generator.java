@@ -108,12 +108,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 		// Start making the final program here
 		// First construct the "fake" stack for program()
-		prog.emit(Push, zero); // Return value of program(); (it's an int)
-		prog.emit(Push, zero); // RegA
-		prog.emit(Push, zero); // RegB
-		prog.emit(Push, zero); // RegC
-		prog.emit(Push, zero); // RegD
-		prog.emit(Push, zero); // RegE
+//		prog.emit(Push, zero); // Return value of program(); (it's an int)
+//		prog.emit(Push, zero); // RegA
+//		prog.emit(Push, zero); // RegB
+//		prog.emit(Push, zero); // RegC
+//		prog.emit(Push, zero); // RegD
+//		prog.emit(Push, zero); // RegE
 		prog.emit(Const, new Value(endLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE)); // Return address
 		// No parameters, so nothing to push here. Maybe a TODO?
@@ -512,11 +512,16 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		if (ctx.expr() != null) {
 			visit(ctx.expr());
 			
-			// Now move the value from regE to the stack.
+			// Now move the value from regE to the stack at some point
 		}
 		
-		Function func = checkResult.getFunction(ctx.parent);
-		
+		Function func = null;
+		ParseTree curr = ctx;
+		while (func == null) {
+				func = checkResult.getFunction(curr);
+				curr = curr.getParent();
+		}
+
 		// Pop all current stack variables off the stack
 		int currStackSize = checkResult.getStackSize(ctx); 
 		
@@ -532,6 +537,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// (or if there were no parameters, the return value)
 		prog.emit(Pop, new Reg(Zero));
 		
+		if (func == null) System.out.println("func == null");
 		// Unpop all the parameters
 		for (Type arg : func.args) {
 			for (int i = 0; i < arg.size(); i++) {

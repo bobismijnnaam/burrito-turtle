@@ -2,7 +2,9 @@ grammar Burrito;
 
 import BurritoVocab; 
 
-program: func*; 
+program: (func | decl)*; 
+	
+decl: type ID ASS expr SEMI;
 	
 func: sig stat* END;
 sig: type ID LPAR (arg (COMMA arg)*)? RPAR;

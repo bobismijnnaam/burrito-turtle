@@ -1,7 +1,6 @@
 package comp;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import lang.BurritoBaseListener;
@@ -117,7 +116,15 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	public void exitReturnStat(lang.BurritoParser.ReturnStatContext ctx) {
-		Function func = getFunction(ctx.parent);
+		Function func = null;
+		ParseTree curr = ctx;
+
+		while (func == null) {
+			func = getFunction(curr);
+			curr = curr.getParent();
+		}
+
+		if (func.returnType == null) System.out.println("ret is null");
 		checkType(ctx.expr(), func.returnType);
 		setStackSize(ctx, scope.getCurrentStackSize());
 	};

@@ -20,6 +20,18 @@ public class SprockellTest {
 	
 	private final static String BASE_DIR = "src/tests/testfiles";
 	private final static String EXT = ".symbol";
+
+	@Test
+	public void fib() {
+		Program sp = Sprockell.scaryCompile("int program().");
+		System.out.println(sp.prettyString(0, true));
+		
+		
+		String result = compileAndRunFile("Fib");
+		String output = "0\n1\n3\n8\n21\n55\n";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result.replaceAll("\r\n", "\n"));
+	}
 	
 	@Test
 	public void simplePipe() {
