@@ -98,7 +98,7 @@ public class Checker extends BurritoBaseListener {
 		// a negative offset
 		scope.finishArgs();
 
-		setFunction(ctx.parent, scope.func(funcID)); // TODO: Is this needed/used?
+		setFunction(ctx.parent, scope.func(funcID));
 	};
 	
 	@Override

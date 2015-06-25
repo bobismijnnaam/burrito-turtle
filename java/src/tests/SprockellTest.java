@@ -134,8 +134,6 @@ public class SprockellTest {
 	public static String compileAndRun(ANTLRInputStream input) {
 		Program prog = Sprockell.compile(input);
 		
-		System.out.println(prog.prettyString(0, true));
-		
 		if (prog == null) {
 			System.out.println("There were errors");
 			return null;
