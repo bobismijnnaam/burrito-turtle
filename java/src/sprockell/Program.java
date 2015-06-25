@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
 
 import sprockell.Sprockell.Op;
 
@@ -188,8 +189,6 @@ public class Program {
 		for (Instr instruction : func.instr) {
 			instr.add(instruction);
 		}
-		
-		// Done? 8D
 	}
 	
 	public void popInstruction() {

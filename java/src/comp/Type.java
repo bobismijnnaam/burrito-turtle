@@ -13,6 +13,15 @@ abstract public class Type {
 		return this.getClass().equals(other.getClass());
 	}
 	
+	public boolean equals(Object other) {
+		if (other instanceof Type) {
+			Type niceOther = (Type) other;
+			return equals(niceOther);
+		} else {
+			return false;
+		}
+	}
+	
 	static public class Bool extends Type {
 		@Override
 		public int size() {

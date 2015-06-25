@@ -6,16 +6,15 @@ import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
 
 import java.util.HashMap;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 
 import lang.BurritoBaseVisitor;
+import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
-import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.DecExprContext;
@@ -59,9 +58,7 @@ import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
-import comp.Type.Array;
 import sprockell.Instr;
 import sprockell.MemAddr;
 import sprockell.Operator;
@@ -69,6 +66,8 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+
+import comp.Type.Array;
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public final String MAINMETHOD = "program";
@@ -81,6 +80,11 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private String mainLabel;
 	private String endLabel;
 	
+	/**
+	 * Puts a new Program instance into prog, and pushes the old one on the stack.
+	 * At the end the visitor will stitch them all together.
+	 * @param funcName The function you're entering so we can save it in a map
+	 */
 	private void enterFunc(String funcName) {
 		progStack.push(prog);
 		prog = new Program();
@@ -108,19 +112,16 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			visit(asc);
 		}
 		
-		if (!progMap.containsKey(MAINMETHOD)) {
-			System.out.println(MAINMETHOD + " NOT FOUND, undefined behaviour from here on");
-			return null;
-		}
+		// TODO: There are better ways to check this, such as veryifying after the FunctionCollector phase. 
+		// TODO: Also, once imports get in here it shouldn't be a problem since a file does not explicitly need a main
+		// If it's imported it doesn't need one
+//		if (!progMap.containsKey(MAINMETHOD)) {
+//			System.out.println(MAINMETHOD + " NOT FOUND, undefined behaviour from here on");
+//			return null;
+//		}
 		
 		// Start making the final program here
 		// First construct the "fake" stack for program()
-//		prog.emit(Push, zero); // Return value of program(); (it's an int)
-//		prog.emit(Push, zero); // RegA
-//		prog.emit(Push, zero); // RegB
-//		prog.emit(Push, zero); // RegC
-//		prog.emit(Push, zero); // RegD
-//		prog.emit(Push, zero); // RegE
 		prog.emit(Const, new Value(endLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE)); // Return address
 		// No parameters, so nothing to push here. Maybe a TODO?
@@ -147,15 +148,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitFunc(FuncContext ctx) {
-		Function func = checkResult.getFunction(ctx);
-		
-		enterFunc(func.id);
+		Function.Overload func = checkResult.getFunction(ctx); 
 
-		if (func.id.equals(MAINMETHOD)) {
+		enterFunc(func.func.id + func.label);
+		
+		if (func.func.id.equals(MAINMETHOD) && func.args.length == 0) {
 			mainLabel = func.label;
-			if (func.args.length > 0) {
-				System.out.println("Warning, giving " + MAINMETHOD + " more than one argument causes undefined behaviour!");
-			}
 		}
 
 		prog.emit(func.label, Nop);
@@ -513,7 +511,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitFuncExpr(FuncExprContext ctx) {
-		Function func = checkResult.getFunction(ctx.ID());
+		Function.Overload func = checkResult.getFunction(ctx.ID());
 		
 		Reg zero = new Reg(Zero);
 		String returnLabel = Program.mkLbl(ctx, "return");
@@ -573,17 +571,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	@Override
 	public List<Instr> visitReturnStat(ReturnStatContext ctx) {
 		if (ctx.expr() != null) {
-			visit(ctx.expr());
-			
-			// Now move the value from regE to the stack at some point
+			visit(ctx.expr()); 
 		}
 		
-		Function func = null;
-		ParseTree curr = ctx;
-		while (func == null) {
-				func = checkResult.getFunction(curr);
-				curr = curr.getParent();
-		}
+		Function.Overload func = checkResult.getFunction(ctx);
 
 		// Pop all current stack variables off the stack
 		int currStackSize = checkResult.getStackSize(ctx); 
@@ -600,7 +591,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// (or if there were no parameters, the return value)
 		prog.emit(Pop, new Reg(Zero));
 		
-		if (func == null) System.out.println("func == null");
 		// Unpop all the parameters
 		for (Type arg : func.args) {
 			for (int i = 0; i < arg.size(); i++) {
@@ -609,7 +599,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		// Store the return value in the return value field
-		if (ctx.expr() != null) {
+		if (ctx.expr() != null && func.func.id != MAINMETHOD) {
 			prog.emit(Const, new Value(6), new Reg(RegD)); // To skip over the return address field and the 5 registers
 			prog.emit(Compute,  new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(RegD));
 			prog.emit(Store, new Reg(RegE), new MemAddr(RegD));

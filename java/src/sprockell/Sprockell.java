@@ -15,9 +15,11 @@ import sprockell.Operand.Type;
 
 import comp.Checker;
 import comp.ErrorListener;
+import comp.FunctionCollector;
 import comp.Generator;
 import comp.ParseException;
 import comp.Result;
+import comp.Scope;
 
 public class Sprockell {
 	
@@ -109,11 +111,13 @@ public class Sprockell {
 		parser.removeErrorListeners();
 		parser.addErrorListener(listener);
 		
+		FunctionCollector funCol = new FunctionCollector();
 		Checker checker = new Checker();
 		Generator generator = new Generator();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = funCol.generate(result);
+			Result checkResult = checker.check(result, scope);
 			Program prog = generator.generate(result, checkResult);
 
 			// If errors, an exception will be thrown

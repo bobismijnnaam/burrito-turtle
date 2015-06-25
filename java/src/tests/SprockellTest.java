@@ -23,10 +23,6 @@ public class SprockellTest {
 
 	@Test
 	public void fib() {
-		Program sp = Sprockell.scaryCompile("int program().");
-		System.out.println(sp.prettyString(0, true));
-		
-		
 		String result = compileAndRunFile("Fib");
 		String output = "0\n1\n3\n8\n21\n55\n";
 		assertNotNull("Compiling or executing went wrong", result);
@@ -77,9 +73,16 @@ public class SprockellTest {
 	public void simpleArray() {
 		String result = compileAndRunFile("SimpleArray");
 		String output = "0123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
-		//String output = "3";
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result.replaceAll("\r\n", "\n"));
+	}
+	
+	@Test
+	public void simpleOverloading() {
+		String result = compileAndRunFile("SimpleOverloading");
+		String output = "3\n1\n25\n";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized(output, result);
 	}
 	
 	@Test
@@ -198,5 +201,9 @@ public class SprockellTest {
 			System.out.println("Stream was empty");
 			return null;
 		}
+	}
+	
+	public void assertSanitized(String expected, String actual) {
+		assertEquals(expected.replaceAll("\r\n", "\n"), actual.replaceAll("\r\n", "\n"));
 	}
 } 

@@ -20,7 +20,7 @@ public class Scope {
 	/** Map from declared variables to their offset within the allocation
 	 * record of this scope. */
 	private Map<String, Integer> offsets = new HashMap<String, Integer>();
-	private Map<String, Function> functions = new HashMap<String, Function>();
+	private Map<String, Function> functions = new HashMap<>();
 	
 	private List<Arg> argList = new ArrayList<>();
 	
@@ -85,26 +85,27 @@ public class Scope {
 		return result;
 	}
 	
-	public boolean putFunc(String id, String label, Type returnType, Type... args) {
-		Function func = new Function(args, id, returnType, label);
-		
-		functions.put(id, func);
-		
-		return true;
+	// TODO: Finish this (check if signature already exists, if not add)
+	public String putFunc(String id, String label, Type returnType, Type... args) {
+		if (!functions.containsKey(id)) functions.put(id, new Function(id, returnType));
+		Function func = functions.get(id);
+		if (!func.returnType.equals(returnType)) return "A function can only have one return type"
+				+ " across overloads";
+
+		return func.registerOverload(args, label);
 	}
 	
+	// TODO: Return true without any checks? Should be useful somehow
 	public boolean putArg(String id, Type type) {
-//		types.put(id, type);
 		Arg arg = new Arg();
 		arg.id = id;
 		arg.type = type;
 		argList.add(arg);
 		
-//		System.out.println("Registered " + id + " of type " + type);
-		
 		return true;
 	}
 	
+	// TODO: Return true without any checks? Should be useful somehow
 	public boolean finishArgs() {
 		int leftMargin = 0;
 		for (Arg arg : argList) {

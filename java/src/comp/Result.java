@@ -12,7 +12,7 @@ public class Result {
 	private final ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	/** Mapping from variables to coordinates. */
 	private final ParseTreeProperty<Integer> offsets = new ParseTreeProperty<>();
-	private final ParseTreeProperty<Function> functions = new ParseTreeProperty<>();
+	private final ParseTreeProperty<Function.Overload> functions = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Integer> stackSizes = new ParseTreeProperty<>();
 
 	/** Adds an association from parse tree node to the flow graph entry. */
@@ -50,11 +50,11 @@ public class Result {
 		return this.types.get(node);
 	}
 
-	public void setFunction(ParseTree node, Function function) {
-		this.functions .put(node, function);
+	public void setFunction(ParseTree node, Function.Overload function) {
+		this.functions.put(node, function);
 	}
 	
-	public Function getFunction(ParseTree node) {
+	public Function.Overload getFunction(ParseTree node) {
 		return this.functions.get(node);
 	}
 
