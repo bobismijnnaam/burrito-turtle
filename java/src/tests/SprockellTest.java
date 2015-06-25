@@ -110,6 +110,7 @@ public class SprockellTest {
 		assertEquals(output, result.replaceAll("\r\n", "\n"));
 	}
 	
+	@Test
 	public void comments() {
 		String result = compileAndRunFile("Comments");
 		assertNotNull("Compiling or executing went wrong", result);
