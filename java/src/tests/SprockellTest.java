@@ -36,7 +36,7 @@ import comp.Generator;
 import comp.ParseException;
 import comp.Result;
 
-public class SprockellTest {
+public class SprockellTest { 
 	
 	private final static String BASE_DIR = "src/tests/testfiles";
 	private final static String EXT = ".symbol";
@@ -119,7 +119,7 @@ public class SprockellTest {
 		return compileAndRun(new ANTLRInputStream(progStr));
 	}
 	
-	public static String compileAndRunFile(String filename) {
+	public static String compileAndRunFile(String filename) { 
 		try {
 			return compileAndRun(new ANTLRInputStream(new FileReader(new File(BASE_DIR, filename + EXT))));
 		} catch (FileNotFoundException e) {
@@ -167,4 +167,4 @@ public class SprockellTest {
 			return null;
 		}
 	}
-}
+} 

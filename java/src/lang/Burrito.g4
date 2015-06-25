@@ -2,7 +2,7 @@ grammar Burrito;
 
 import BurritoVocab;
 
-program: stat*; 
+program: stat*;
 
 stat: type ID ASS expr SEMI				#typeAssignStat
 	| target ASS expr SEMI				#assStat

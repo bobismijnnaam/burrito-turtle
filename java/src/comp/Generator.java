@@ -59,7 +59,7 @@ import sprockell.Value;
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private Program prog;
-	private Result checkResult;
+	private Result checkResult; 
 
 	public Program generate(ParseTree tree, Result checkResult) {
 		this.prog = new Program();

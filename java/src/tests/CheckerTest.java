@@ -21,11 +21,11 @@ import comp.Generator;
 import comp.ParseException;
 import comp.Result;
 import comp.Type;
-
+ 
 public class CheckerTest {
 	
 	@Test
-	public void basicTests() {
+	public void basicTests() { 
 		// int assignment
 		String testProgram = "int i = 0;";
 		ParseTree result = parse(testProgram);

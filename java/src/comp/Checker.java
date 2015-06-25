@@ -119,7 +119,7 @@ public class Checker extends BurritoBaseListener {
 			setType(ctx.ID(), array);
 			setType(ctx, array.elemType);
 			setOffset(ctx.ID(), this.scope.offset(id));
-			for (ExprContext expr : ctx.expr())
+			for (ExprContext expr : ctx.expr()) 
 				checkType(expr, new Type.Int());
 		}
 	}
