@@ -41,6 +41,7 @@ import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
+import lang.BurritoParser.SigContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -88,6 +89,13 @@ public class Checker extends BurritoBaseListener {
 	// FUNCTIONS ---------------------
 	
 	@Override
+	public void enterSig(SigContext ctx) {
+		if (!scope.startArgRecording()) {
+			System.out.println("Something went wrong with the arguments");
+		}
+	}
+	
+	@Override
 	public void exitSig(lang.BurritoParser.SigContext ctx) {
 		// Get signature of function
 		String funcID = ctx.ID().getText(); // Get function ID
@@ -104,7 +112,7 @@ public class Checker extends BurritoBaseListener {
 		scope.pushScope();
 		// Commit the pushed arguments, so they will be registered as well and are assigned
 		// a negative offset
-		scope.finishArgs();
+		scope.finishArgRecording();
 
 		setFunction(ctx.parent, overload);
 	};
@@ -114,7 +122,7 @@ public class Checker extends BurritoBaseListener {
 		String argID = ctx.ID().getText();
 		Type argType = getType(ctx.type());
 
-		scope.putArg(argID, argType);
+		scope.recordArg(argID, argType);
 
 		setType(ctx, argType);
 	}

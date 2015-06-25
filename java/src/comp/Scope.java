@@ -29,8 +29,6 @@ public class Scope {
 	private Stack<Map<String, Integer>> offsetStack = new Stack<Map<String, Integer>>();
 	private boolean recordingArgs;
 	
-	// TODO: Implement function pushing popping
-	
 	/**
 	 * Pops the previous scope state off the stack, restoring previous sizes, type mappings, etc.
 	 */
@@ -95,7 +93,7 @@ public class Scope {
 		return func.registerOverload(args, label);
 	}
 	
-	public boolean startArgs() {
+	public boolean startArgRecording() {
 		if (!recordingArgs && argList.size() == 0) {
 			recordingArgs = true;
 			return true;
@@ -110,8 +108,12 @@ public class Scope {
 		return false;
 	}
 	
-	// TODO: Return true without any checks? Should be useful somehow
-	public boolean putArg(String id, Type type) {
+	public boolean recordArg(String id, Type type) {
+		if (!recordingArgs) {
+			System.out.println("Argument recording hasn't been started");
+			return false;
+		}
+		
 		Arg arg = new Arg();
 		arg.id = id;
 		arg.type = type;
@@ -120,8 +122,7 @@ public class Scope {
 		return true;
 	}
 	
-	// TODO: Return true without any checks? Should be useful somehow
-	public boolean finishArgs() {
+	public boolean finishArgRecording() {
 		if (!recordingArgs) {
 			System.out.println("Argument recording was not started");
 			return false;

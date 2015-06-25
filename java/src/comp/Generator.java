@@ -575,11 +575,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		int currStackSize = checkResult.getStackSize(ctx); 
 		
 		// Unwind the stack
-		// TODO: Optimize this to an instruction that just changes the stack pointer
-		// Bonus: this does null every stack entry :-)
-		for (int i = 0; i < currStackSize; i++) {
-			prog.emit(Pop, new Reg(Zero));
-		}
+		if (currStackSize > 0) {
+			prog.emit(Const, new Value(currStackSize), new Reg(RegD));
+			prog.emit(Compute, new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(SP));
+		} 
 		
 		// ARP is now at the integer AFTER the last parameter, so we 
 		// pop one more to let the SP point to the last parameter
@@ -587,13 +586,19 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Pop, new Reg(Zero));
 		
 		// Unpop all the parameters
+		int total = 0;
 		for (Type arg : func.args) {
 			for (int i = 0; i < arg.size(); i++) {
-				prog.emit(Pop, new Reg(Zero));
+				total += 1; 
 			}
 		}
+		if (total > 0) {
+			prog.emit(Const, new Value(total), new Reg(RegD));
+			prog.emit(Compute, new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(SP));
+		}
 		
-		// Store the return value in the return value field
+		// Store the return value in the return value field if it's not main
+		// TODO: Do something with return value in case of main
 		if (ctx.expr() != null && func.func.id != MAINMETHOD) {
 			prog.emit(Const, new Value(6), new Reg(RegD)); // To skip over the return address field and the 5 registers
 			prog.emit(Compute,  new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(RegD));
