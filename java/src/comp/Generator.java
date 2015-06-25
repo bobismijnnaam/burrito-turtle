@@ -80,6 +80,9 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private String mainLabel;
 	private String endLabel;
 	
+	private String printBoolLabel;
+	private String printIntLabel;
+	
 	/**
 	 * Puts a new Program instance into prog, and pushes the old one on the stack.
 	 * At the end the visitor will stitch them all together.
@@ -612,6 +615,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	/**
+	 * TODO: Make sure it's called like a function instead of just pasted in the source
+	 * Do this for both bool and integer. Test it as well! And wonder at the marvelous efficiency!
+	 */
 	@Override
 	public List<Instr> visitOutStat(OutStatContext ctx) {
 		if (ctx.expr() != null) {
@@ -619,27 +626,42 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 			// Different routine depending on type
 			if (checkResult.getType(ctx.expr()).equals(new Type.Bool())) {
-				Reg workReg = new Reg(RegD);
-				String equals = Program.mkLbl(ctx, "equals");
-				String end = Program.mkLbl(ctx, "end");
-				
-				prog.emit(Compute,  new Operator(Equal), new Reg(Zero), new Reg(RegE), workReg);
-				prog.emit(Branch, workReg, new Target(equals));
-				
-				for (char c : "true".toCharArray()) {
-					prog.emit(Const, new Value(c), workReg);
-					prog.emit(Write, workReg, new MemAddr("stdio"));
+				if (printBoolLabel == null) {
+					printBoolLabel = "popeOp_bool";
+					
+					enterFunc("pipeOp_bool");
+					
+					Reg workReg = new Reg(RegD);
+					String equals = Program.mkLbl(ctx, "equals");
+					String end = Program.mkLbl(ctx, "end");
+					
+					prog.emit(printBoolLabel, Compute,  new Operator(Equal), new Reg(Zero), new Reg(RegE), workReg);
+					prog.emit(Branch, workReg, new Target(equals));
+					
+					for (char c : "true".toCharArray()) {
+						prog.emit(Const, new Value(c), workReg);
+						prog.emit(Write, workReg, new MemAddr("stdio"));
+					}
+					prog.emit(Jump, new Target(end));
+					
+					prog.emit(equals, Nop);
+					
+					for (char c : "false".toCharArray()) {
+						prog.emit(Const, new Value(c), workReg);
+						prog.emit(Write, workReg, new MemAddr("stdio"));
+					}
+					
+					prog.emit(end, Pop, new Reg(RegE));
+					prog.emit(Jump, new Target(RegE));
+					
+					leaveFunc();
 				}
-				prog.emit(Jump, new Target(end));
 				
-				prog.emit(equals, Nop);
-				
-				for (char c : "false".toCharArray()) {
-					prog.emit(Const, new Value(c), workReg);
-					prog.emit(Write, workReg, new MemAddr("stdio"));
-				}
-				
-				prog.emit(end, Nop);
+				String returnLabel = Program.mkLbl(ctx, "boolreturn");
+				prog.emit(Const, new Value(returnLabel), new Reg(RegD));
+				prog.emit(Push, new Reg(RegD));
+				prog.emit(Jump, new Target(printBoolLabel));
+				prog.emit(returnLabel, Nop);
 			} else if (checkResult.getType(ctx.expr()).equals(new Type.Int())) {
 				Operator mod = new Operator(Mod);
 				Operator div = new Operator(Div);
@@ -737,13 +759,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		Reg workReg = new Reg(RegE);
-		String nl = "\n"; // System.lineSeparator(); // Sprockell seems to handle \n just fine
-
+		// Haskell seems to have no trouble with the \r\n/\n business.
+		if (ctx.newlines().getChildCount() > 0) prog.emit(Const, new Value((int) "\n".toCharArray()[0]), workReg);
 		for (int i = 0; i < ctx.newlines().getChildCount(); i++) {
-			for (char c : nl.toCharArray()) {
-				prog.emit(Const, new Value(c), workReg);
-				prog.emit(Write, workReg, new MemAddr("stdio"));
-			}
+			prog.emit(Write, workReg, new MemAddr("stdio"));
 		}
 		
 		return null;
