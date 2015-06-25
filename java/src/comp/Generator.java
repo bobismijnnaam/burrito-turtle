@@ -224,10 +224,13 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			size *= array.indexSize.get(i);
 		}
 		
+		// In RegC staat nu offset relatief in array
+		
 		// Get offset from ctx.ID() in RegB
 		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
 		// RegB + RegE -> RegE
 		prog.emit(Compute, new Operator(Sub), new Reg(RegB), new Reg(RegC), new Reg(RegE));
+		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
 		return null;
 	}
 	

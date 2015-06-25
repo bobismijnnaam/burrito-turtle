@@ -1,11 +1,12 @@
 int program()
 	int x = 2;
 	int[5] z;
+
 	int y = 4;
 	z[x] = x;
 	z[y] = y;
 	z[4]|;
 	z[2]|;
-	
+
 	<- 0;
 .
