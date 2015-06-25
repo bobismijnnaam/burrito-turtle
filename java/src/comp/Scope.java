@@ -7,6 +7,11 @@ import java.util.Map;
 import java.util.Stack;
 
 public class Scope {
+	class Arg {
+		public Type type;
+		public String id;
+	}
+	
 	/** Current size of this scope (in bytes). 
 	 * Used to calculate offsets of newly declared variables. */
 	private int size;
@@ -17,7 +22,7 @@ public class Scope {
 	private Map<String, Integer> offsets = new HashMap<String, Integer>();
 	private Map<String, Function> functions = new HashMap<String, Function>();
 	
-	private List<String> argList = new ArrayList<String>();
+	private List<Arg> argList = new ArrayList<>();
 	
 	private Stack<Integer> sizeStack = new Stack<Integer>();
 	private Stack<Map<String, Type>> typeStack = new Stack<Map<String, Type>>();
@@ -93,8 +98,11 @@ public class Scope {
 	}
 	
 	public boolean putArg(String id, Type type) {
-		types.put(id, type);
-		argList.add(id);
+//		types.put(id, type);
+		Arg arg = new Arg();
+		arg.id = id;
+		arg.type = type;
+		argList.add(arg);
 		
 //		System.out.println("Registered " + id + " of type " + type);
 		
@@ -103,13 +111,14 @@ public class Scope {
 	
 	public boolean finishArgs() {
 		int leftMargin = 0;
-		for (String id : argList) {
-			leftMargin -= type(id).size();
+		for (Arg arg : argList) {
+			types.put(arg.id, arg.type);
+			leftMargin -= type(arg.id).size();
 		}
 		
-		for (String id : argList) {
-			offsets.put(id, leftMargin);
-			leftMargin += type(id).size();
+		for (Arg arg : argList) {
+			offsets.put(arg.id, leftMargin);
+			leftMargin += types.get(arg.id).size();
 		}
 		
 		argList.clear();

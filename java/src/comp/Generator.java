@@ -128,7 +128,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		prog.emit(endLabel, Nop);
-		prog.emit(Nop);
+		prog.emit(Nop); // Extra nops to flush stdio
 		prog.emit(Nop);
 		prog.emit(Nop);
 		prog.emit(Nop);
