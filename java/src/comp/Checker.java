@@ -89,19 +89,17 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitSig(lang.BurritoParser.SigContext ctx) {
+		// Get signature of function
 		String funcID = ctx.ID().getText(); // Get function ID
-//		Type returnType = getType(ctx.type()); // Get return type
 		Type[] args = new Type[ctx.arg().size()]; // Aggregate argument types
 		for (int i = 0; i < ctx.arg().size(); i++) {
 			args[i] = getType(ctx.arg(i));
 			
 		}
 		
-		// Can't return, since if we're in this phase it means that the Function phase succeeded
+		// Will always succeed, since if we're in this phase it means that the Function phase succeeded
 		Function.Overload overload = scope.func(funcID).getOverload(args);
 
-		// Register the function
-//		scope.putFunc(funcID, label, returnType, args);
 		// Push a scope, since we're going into function scope
 		scope.pushScope();
 		// Commit the pushed arguments, so they will be registered as well and are assigned
@@ -401,13 +399,11 @@ public class Checker extends BurritoBaseListener {
 		}
 		Function.Overload overload = func.getOverload(callArgs); 
 		if (overload == null) {
-			addError(ctx, "No appropriate overload found for function " + func.id);
-			// TODO: List available options?
+			addError(ctx, "No appropriate overload found for function \"" + func.id + "\". Available overloads are: " + func);
 		}
 		
 		// Set return type of function as expression type
 		// Set the function to the ID for the generator
-		// TODO: Maybe also set the overload here, or save the types?
 		setType(ctx, scope.func(funcID).returnType);
 		setFunction(ctx.ID(), overload);
 	}

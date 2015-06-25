@@ -113,12 +113,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		// TODO: There are better ways to check this, such as veryifying after the FunctionCollector phase. 
-		// TODO: Also, once imports get in here it shouldn't be a problem since a file does not explicitly need a main
+		// Also, once imports get in here it shouldn't be a problem since a file does not explicitly need a main
 		// If it's imported it doesn't need one
-//		if (!progMap.containsKey(MAINMETHOD)) {
-//			System.out.println(MAINMETHOD + " NOT FOUND, undefined behaviour from here on");
-//			return null;
-//		}
 		
 		// Start making the final program here
 		// First construct the "fake" stack for program()
@@ -226,7 +222,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// TODO: Replace with storeAI (store reg => reg, offset)
 		
 		// Waarde mem[arp + offset]
-		// Changed the thing here to SUB TODO
 		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
 		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		return null;

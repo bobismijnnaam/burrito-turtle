@@ -27,6 +27,7 @@ public class Scope {
 	private Stack<Integer> sizeStack = new Stack<Integer>();
 	private Stack<Map<String, Type>> typeStack = new Stack<Map<String, Type>>();
 	private Stack<Map<String, Integer>> offsetStack = new Stack<Map<String, Integer>>();
+	private boolean recordingArgs;
 	
 	// TODO: Implement function pushing popping
 	
@@ -85,7 +86,6 @@ public class Scope {
 		return result;
 	}
 	
-	// TODO: Finish this (check if signature already exists, if not add)
 	public String putFunc(String id, String label, Type returnType, Type... args) {
 		if (!functions.containsKey(id)) functions.put(id, new Function(id, returnType));
 		Function func = functions.get(id);
@@ -93,6 +93,21 @@ public class Scope {
 				+ " across overloads";
 
 		return func.registerOverload(args, label);
+	}
+	
+	public boolean startArgs() {
+		if (!recordingArgs && argList.size() == 0) {
+			recordingArgs = true;
+			return true;
+		} else if (recordingArgs) {
+			System.out.println("Argument capture was not stopped with finishArgs() before");
+			return false;
+		} else if (argList.size() > 0) {
+			System.out.println("There were already arguments in the list before starting");
+			return false;
+		}
+		
+		return false;
 	}
 	
 	// TODO: Return true without any checks? Should be useful somehow
@@ -107,6 +122,11 @@ public class Scope {
 	
 	// TODO: Return true without any checks? Should be useful somehow
 	public boolean finishArgs() {
+		if (!recordingArgs) {
+			System.out.println("Argument recording was not started");
+			return false;
+		}
+		
 		int leftMargin = 0;
 		for (Arg arg : argList) {
 			types.put(arg.id, arg.type);
@@ -119,6 +139,7 @@ public class Scope {
 		}
 		
 		argList.clear();
+		recordingArgs = false;
 		
 		return true;
 	}
