@@ -1,9 +1,6 @@
 package tests;
 
 import static org.junit.Assert.*;
-import static sprockell.Operator.Which.*;
-import static sprockell.Reg.Which.*;
-import static sprockell.Sprockell.Op.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,28 +10,11 @@ import java.io.InputStream;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import lang.BurritoLexer;
-import lang.BurritoParser;
-
 import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.Lexer;
-import org.antlr.v4.runtime.TokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
-import sprockell.MemAddr;
-import sprockell.Operator;
 import sprockell.Program;
-import sprockell.Reg;
 import sprockell.Sprockell;
-import sprockell.Target;
-import sprockell.Value;
-import comp.Checker;
-import comp.Generator;
-import comp.ParseException;
-import comp.Result;
 
 public class SprockellTest { 
 	
