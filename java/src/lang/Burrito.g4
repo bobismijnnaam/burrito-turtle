@@ -1,6 +1,6 @@
 grammar Burrito;
 
-import BurritoVocab;
+import BurritoVocab; 
 
 program: func*; 
 	
@@ -13,15 +13,15 @@ stat: type ID ASS expr SEMI				#typeAssignStat
 	| expr IF block (ELSE block)? END	#ifStat
 	| expr WHILE block END				#whileStat
 	| type ID SEMI						#typeStat
-	| expr? IO newlines SEMI				#outStat
+	| expr? IO newlines SEMI			#outStat
 	| RETURN expr? SEMI					#returnStat
 	;
 
 block: stat*;
 
-target: ID								#idTarget
-	| ID LBRA expr RBRA					#arrayTarget
-	;
+target: ID								#idTarget 
+	| ID (LBRA expr RBRA)+				#arrayTarget
+	; 
  
 expr: NOT expr								#notExpr
 	| expr DIV expr							#divExpr
@@ -45,11 +45,12 @@ expr: NOT expr								#notExpr
 	| FALSE 								#falseExpr
 	| MIN expr								#negExpr
 	| ID LPAR (expr (COMMA expr)*)? RPAR	#funcExpr
+	| ID (LBRA expr RBRA)+					#arrayExpr
 	;
 
-type: INT	#intType 
-	| type LBRA NUM RBRA #arrayType
-	| BOOL 	#boolType
+type: INT					#intType 
+	| type LBRA NUM RBRA	#arrayType
+	| BOOL 					#boolType
 	;
 	
 newlines: IONL*;

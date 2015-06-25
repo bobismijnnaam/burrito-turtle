@@ -75,7 +75,7 @@ public class Scope {
 		if (result) {
 			this.types.put(id, type);
 			this.offsets.put(id, this.size);
-			this.size += type.size() * size;
+			this.size += size;
 		}
 		return result;
 	}
