@@ -43,7 +43,7 @@ expr: NOT expr				#notExpr
 	;
 
 type: INT					#intType 
-	| type LBRA NUM RBRA	#arrayType
+	| type LBRA NUM RBRA	#arrayType 
 	| BOOL 					#boolType
 	;
 	
