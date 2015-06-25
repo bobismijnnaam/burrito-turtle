@@ -18,6 +18,8 @@ import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
+import lang.BurritoParser.DecExprContext;
+import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
 import lang.BurritoParser.ExprContext;
@@ -29,10 +31,13 @@ import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
+import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
+import lang.BurritoParser.MinAssStatContext;
 import lang.BurritoParser.MinExprContext;
 import lang.BurritoParser.ModExprContext;
+import lang.BurritoParser.MulAssStatContext;
 import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NotExprContext;
@@ -40,6 +45,7 @@ import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.OrExprContext;
 import lang.BurritoParser.OutStatContext;
 import lang.BurritoParser.ParExprContext;
+import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.ProgramContext;
@@ -53,6 +59,7 @@ import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import comp.Type.Array;
 import sprockell.Instr;
@@ -159,6 +166,39 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 		leaveFunc();
 		
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitPlusAssStat(PlusAssStatContext ctx) {
+		return emitOpAss(ctx, Add);
+	}
+	
+	@Override
+	public List<Instr> visitMinAssStat(MinAssStatContext ctx) {
+		return emitOpAss(ctx, Sub);
+	}
+	
+	@Override
+	public List<Instr> visitDivAssStat(DivAssStatContext ctx) {
+		return emitOpAss(ctx, Div);
+	}
+	
+	@Override
+	public List<Instr> visitMulAssStat(MulAssStatContext ctx) {
+		return emitOpAss(ctx, Mul);
+	}
+	
+	private List<Instr> emitOpAss(ParserRuleContext ctx, Operator.Which op) {
+		visit(ctx.getChild(0));
+		prog.emit(Push, new Reg(RegE));
+		visit(ctx.getChild(3));
+		prog.emit(Pop, new Reg(RegD));
+		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
+		// mem addr => RegB get target value
+		prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		prog.emit(Compute, new Operator(op), new Reg(RegC), new Reg(RegE), new Reg(RegE));
+		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		return null;
 	}
 	
@@ -337,6 +377,29 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	@Override
+	public List<Instr> visitIncExpr(IncExprContext ctx) {
+		visit(ctx.target());
+		
+		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
+		prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		prog.emit(Const, new Value(ctx.PLUS().size()), new Reg(RegD));
+		prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegD), new Reg(RegE));
+		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitDecExpr(DecExprContext ctx) {
+		visit(ctx.target());
+		
+		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
+		prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		prog.emit(Const, new Value(ctx.MIN().size()), new Reg(RegD));
+		prog.emit(Compute, new Operator(Sub), new Reg(RegC), new Reg(RegD), new Reg(RegE));
+		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+		return null;
+	}
 	
 	@Override
 	public List<Instr> visitDivExpr(DivExprContext ctx) {
