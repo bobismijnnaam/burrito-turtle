@@ -184,6 +184,93 @@ public class CheckerTest {
 		}
 	}
 	
+	@Test
+	public void incExprTest() {
+		String testProgram = "int program() int x = 0; x+++++++++; .";
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+	}
+	
+	@Test
+	public void decExprTest() {
+		String testProgram = "int program() int x = 0; x----------; .";
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+	}
+	
+	@Test
+	public void operatorAssignTests() {
+		String testProgram = "int program() int x = 0; x += 3; .";
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+		
+		testProgram = "int program() int x = 0; x -= 3; .";
+		result = parse(testProgram);
+		checker = new Checker();
+
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+		
+		testProgram = "int program() int x = 0; x /= 3; .";
+		result = parse(testProgram);
+		checker = new Checker();
+
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+		
+		testProgram = "int program() int x = 0; x *= 3; .";
+		result = parse(testProgram);
+		checker = new Checker();
+
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+	}
+	
 	private ParseTree parse(String testProgram) {
 		CharStream input = new ANTLRInputStream(testProgram);
 		Lexer lexer = new BurritoLexer(input);

@@ -1,0 +1,42 @@
+{ Calculate the power }
+int pow(int x, int y) 
+	int z = 1;
+	y > 0 @
+		z = z * x;
+		y-;
+	.
+	
+	<- z;
+.
+
+{ Returns if integer is even }
+bool even(int x) <- x % 2 == 0; .
+
+{ Returns the min value }
+int min(int x, int y)
+	int z = 0;
+	x < y ?
+		z = x;
+	.
+	z = y;
+	<- z;
+.
+
+{ Returns the max value }
+int max(int x, int y)
+	int z = 0;
+	x > y ?
+		z = x;
+	.
+	z = y;
+	<- z;
+.
+
+{ Returns the absolute value }
+int abs(int x) 
+	x < 0 ? x = x * - 1; .
+	<- x;
+.
+
+
+

@@ -29,6 +29,7 @@ IONL: '\\'; // This is just ONE backslash! Antlr wants each backslash escaped wi
 SCOPE: '#';
 END: '.';
 SEMI: ';';
+COLON: ':';
 LPAR: '(';
 RPAR: ')';
 LBRA: '[';
@@ -51,7 +52,7 @@ ID: LETTER (LETTER | DIGIT)*;
 
 COMMA: ',';
 
-ONELINECOMMENT: '--' (~('\r'|'\n'))* -> skip;
+ONELINECOMMENT: '>>' (~('\r'|'\n'))* -> skip;
 MULTILINECOMMENT: '{' .*? '}' -> skip; 
 WS: [ \t\r\n]+ -> skip;
 

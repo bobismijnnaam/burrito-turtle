@@ -12,6 +12,8 @@ import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.BoolTypeContext;
+import lang.BurritoParser.DecExprContext;
+import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
 import lang.BurritoParser.ExprContext;
@@ -23,16 +25,20 @@ import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
+import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
+import lang.BurritoParser.MinAssStatContext;
 import lang.BurritoParser.MinExprContext;
 import lang.BurritoParser.ModExprContext;
+import lang.BurritoParser.MulAssStatContext;
 import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
 import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.OrExprContext;
 import lang.BurritoParser.ParExprContext;
+import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.TrueExprContext;
@@ -47,7 +53,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import sprockell.Program;
-
 import comp.Type.Array;
 
 public class Checker extends BurritoBaseListener {
@@ -162,6 +167,8 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitIdTarget(IdTargetContext ctx) {
 		setType(ctx, scope.type(ctx.ID().getText()));
+		if (checkType(ctx, getType(ctx)))
+			setOffset(ctx, scope.offset(ctx.ID().getText()));
 	}
 	
 	@Override
@@ -236,6 +243,22 @@ public class Checker extends BurritoBaseListener {
 			for (ExprContext expr : ctx.expr())
 				checkType(expr, new Type.Int());
 		}
+	}
+	
+	@Override
+	public void exitIncExpr(IncExprContext ctx) {
+		Type type = this.scope.type(ctx.target().getText());
+		setType(ctx, type);
+		checkType(ctx, new Type.Int());
+		setOffset(ctx, this.scope.offset(ctx.target().getText()));
+	}
+	
+	@Override
+	public void exitDecExpr(DecExprContext ctx) {
+		Type type = this.scope.type(ctx.target().getText());
+		setType(ctx, type);
+		checkType(ctx, new Type.Int());
+		setOffset(ctx, this.scope.offset(ctx.target().getText()));
 	}
 	
 	// TODO , By compare check if it is a type that can be compared
@@ -398,6 +421,51 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitIfStat(IfStatContext ctx) {
 		checkType(ctx.expr(), new Type.Bool());
+	}
+	
+	// += -= /= *= stats
+	@Override
+	public void exitPlusAssStat(PlusAssStatContext ctx) {
+		checkAssignment(ctx);
+	}
+	
+	@Override
+	public void exitMinAssStat(MinAssStatContext ctx) {
+		checkAssignment(ctx);
+	}
+	
+	@Override
+	public void exitDivAssStat(DivAssStatContext ctx) {
+		checkAssignment(ctx);
+	}
+	
+	@Override
+	public void exitMulAssStat(MulAssStatContext ctx) {
+		checkAssignment(ctx);
+	}
+	
+	private void checkAssignment(ParseTree ctx) {
+		String id = ctx.getChild(0).getText();
+		
+		Type type = this.scope.type(id);
+		if (id.contains("[")) {
+			id = id.split("\\[")[0];
+			Type.Array array = (Array) this.scope.type(id);
+			if (array != null) {
+				type = array.elemType;
+				while (type.toString().equals("Array")) {
+					type = ((Type.Array) type).elemType;
+				}
+			}
+		}
+		
+		if (type != null) {
+			if (checkType((ParserRuleContext) ctx.getChild(3), type)) {
+				setOffset((ParserRuleContext) ctx.getChild(0), scope.offset(id));
+			}
+		} else {
+			addError((ParserRuleContext) ctx.getChild(0), "Missing inferred type of " + ctx.getChild(0).getText());
+		}
 	}
 	
 	@Override

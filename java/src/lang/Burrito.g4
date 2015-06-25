@@ -10,13 +10,18 @@ func: sig stat* END;
 sig: type ID LPAR (arg (COMMA arg)*)? RPAR;
 arg: type ID;		
 
-stat: type ID ASS expr SEMI				#typeAssignStat
-	| target ASS expr SEMI				#assStat
-	| expr IF block (ELSE block)? END	#ifStat
-	| expr WHILE block END				#whileStat
-	| type ID SEMI						#typeStat
-	| expr? IO newlines SEMI			#outStat
-	| RETURN expr? SEMI					#returnStat
+stat: type ID ASS expr SEMI					#typeAssignStat
+	| target ASS expr SEMI					#assStat
+	| target PLUS ASS expr SEMI				#plusAssStat
+	| target MIN ASS expr SEMI				#minAssStat
+	| target MUL ASS expr SEMI				#mulAssStat
+	| target DIV ASS expr SEMI				#divAssStat
+	| expr IF block (ELSE block)? END		#ifStat
+	| expr WHILE block END					#whileStat
+	| type ID SEMI							#typeStat
+	| expr? IO newlines SEMI				#outStat
+	| RETURN expr? SEMI						#returnStat
+	| expr SEMI								#exprStat
 	;
 
 block: stat*;
@@ -26,6 +31,8 @@ target: ID								#idTarget
 	; 
  
 expr: NOT expr								#notExpr
+	| target (PLUS)+						#incExpr
+	| target (MIN)+							#decExpr
 	| expr DIV expr							#divExpr
 	| expr MUL expr							#mulExpr
 	| expr POW expr							#powExpr

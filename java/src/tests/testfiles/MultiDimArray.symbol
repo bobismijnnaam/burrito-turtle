@@ -1,5 +1,5 @@
 int program()
-	-- Multi Dimensional Array test!
+	>> Multi Dimensional Array test!
 	int[2][2][2][2] x;
 	int a = 0;
 	int b = 0;
