@@ -62,6 +62,36 @@ public class Sprockell {
 		}
 	}
 	
+	public static Program scaryCompile(String progStr) {
+		CharStream input = new ANTLRInputStream(progStr);
+		
+		ErrorListener listener = new ErrorListener();
+
+		Lexer lexer = new BurritoLexer(input);
+		lexer.removeErrorListeners();
+		lexer.addErrorListener(listener);
+
+		TokenStream tokens = new CommonTokenStream(lexer);
+		BurritoParser parser = new BurritoParser(tokens);
+		ParseTree result = parser.program();
+		parser.removeErrorListeners();
+		parser.addErrorListener(listener);
+		
+		Checker checker = new Checker();
+		Generator generator = new Generator();
+
+		try {
+			Result checkResult = checker.check(result);
+			Program prog = generator.generate(result, checkResult);
+
+			return prog;
+		} catch (ParseException p) {
+			p.printStackTrace();
+		}
+		
+		return null;
+	}
+	
 	public static Program compile(String input) {
 		return compile(new ANTLRInputStream(input));
 	}

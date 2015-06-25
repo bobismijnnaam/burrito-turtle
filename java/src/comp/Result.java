@@ -12,6 +12,8 @@ public class Result {
 	private final ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	/** Mapping from variables to coordinates. */
 	private final ParseTreeProperty<Integer> offsets = new ParseTreeProperty<>();
+	private final ParseTreeProperty<Function> functions = new ParseTreeProperty<>();
+	private final ParseTreeProperty<Integer> stackSizes = new ParseTreeProperty<>();
 
 	/** Adds an association from parse tree node to the flow graph entry. */
 	public void setEntry(ParseTree node, ParserRuleContext entry) {
@@ -46,5 +48,21 @@ public class Result {
 	/** Returns the type associated with a given parse tree node. */
 	public Type getType(ParseTree node) {
 		return this.types.get(node);
+	}
+
+	public void setFunction(ParseTree node, Function function) {
+		this.functions .put(node, function);
+	}
+	
+	public Function getFunction(ParseTree node) {
+		return this.functions.get(node);
+	}
+
+	public void setStackSize(ParseTree node, int currentStackSize) {
+		this.stackSizes.put(node, currentStackSize);
+	}
+	
+	public int getStackSize(ParseTree node) {
+		return this.stackSizes.get(node);
 	}
 }

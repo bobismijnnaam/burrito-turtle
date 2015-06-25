@@ -1,8 +1,16 @@
-int x = 0;
-int[100] z;
+int add(int a, int b) 
+	<- a + b;
+.
 
-x < 100 @
-	z[x] = x;
-	z[x]|;
-	x = x + 1;
+int program()
+	int x = 0;
+	int[100] z;
+	
+	x < 100 @
+		z[x] = x;
+		z[x]|;
+		x = add(x, 1);
+	.
+	
+	<- 0;
 .

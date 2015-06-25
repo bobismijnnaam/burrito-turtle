@@ -4,6 +4,8 @@ lexer grammar BurritoVocab;
  * Basic language building blocks
  */
 
+RETURN: '<-';
+
 PLUS: '+';
 MIN: '-';
 MUL: '*';
@@ -46,6 +48,8 @@ FALSE: ('f' | 'F') 'alse';
 NUM: [1-9] DIGIT* | '0';
 
 ID: LETTER (LETTER | DIGIT)*;
+
+COMMA: ',';
 
 ONELINECOMMENT: '--' (~('\r'|'\n'))* -> skip;
 MULTILINECOMMENT: '{' .*? '}' -> skip; 

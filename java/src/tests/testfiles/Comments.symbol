@@ -1,11 +1,15 @@
--- A comment
-int a = 3; 
--- Another comment
-int a = 3;
--- Yet another comment
-{A weird comment}
-int a {Everywhere} = 5;
-{We don't mind them}
--- They can be combined as well
-int a {See?} = 5; 
--- No worries!
+int program()
+	-- A comment
+	int a = 3; 
+	-- Another comment
+	int b = 3;
+	-- Yet another comment
+	{A weird comment}
+	int c {Everywhere} = 5;
+	{We don't mind them}
+	-- They can be combined as well
+	int d {See?} = 5; 
+	-- No worries!
+	
+	<- 0;
+.

@@ -1,20 +1,19 @@
 package sprockell;
 
-import java.awt.Label;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
-import org.antlr.runtime.Token;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import sprockell.Sprockell.Op;
 
 public class Program {
-	private List<Instr> instr = new ArrayList<Instr>();;
+	private List<Instr> instr = new ArrayList<Instr>();
 	private Map<String, Integer> labelMap = new HashMap<String, Integer>();
 	private Map<Integer, String> lineMap = new HashMap<Integer, String>();
 	
@@ -69,19 +68,40 @@ public class Program {
 	public String prettyString(int indent, boolean printLabels) {
 		String result = "";
 		
+		if (printLabels) {
+			indent = 0;
+			for (Entry<String, Integer> entry : labelMap.entrySet()) {
+				int len = entry.getKey().length() + 2;
+				if (len > indent) indent = len;
+			}
+		}
+		
 		for (int i = 0; i < instr.size(); i++) {
 			if (printLabels) {
+				int leftover = indent;
 				if (lineMap.containsKey(i)) {
 					result += lineMap.get(i) + ": ";
+					leftover -= lineMap.get(i).length() + 2;
+				} 
+
+				for (int j = 0; j < leftover; j++) {
+					result += " ";
 				}
-			}
-			for (int j = 0; j < indent; j++) {
-				result += "\t";
-			}
-			result += instr.get(i).toString();
-			
-			if (i != instr.size() - 1) {
-				result += ",\n";
+
+				result += instr.get(i);
+
+				if (i != instr.size() - 1) {
+					result += ",\n";
+				}
+			} else {
+				for (int j = 0; j < indent; j++) {
+					result += "\t";
+				}
+				result += instr.get(i);
+				
+				if (i != instr.size() - 1) {
+					result += ",\n";
+				}
 			}
 		}
 		
@@ -157,5 +177,22 @@ public class Program {
 			result = inst.fixLabel(labelMap) && result;
 		}
 		return result;
+	}
+
+	public void mergeWithFunction(Program func) {
+		int instructionOffset = instr.size();
+		for (Entry<String, Integer> entry : func.labelMap.entrySet()) {
+			putLabel(entry.getKey(), entry.getValue() + instructionOffset);
+		}
+		
+		for (Instr instruction : func.instr) {
+			instr.add(instruction);
+		}
+		
+		// Done? 8D
+	}
+	
+	public void popInstruction() {
+		instr.remove(instr.size() - 1);
 	}
 }

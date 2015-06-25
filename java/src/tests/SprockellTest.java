@@ -36,7 +36,7 @@ import comp.Generator;
 import comp.ParseException;
 import comp.Result;
 
-public class SprockellTest {
+public class SprockellTest { 
 	
 	private final static String BASE_DIR = "src/tests/testfiles";
 	private final static String EXT = ".symbol";
@@ -84,7 +84,8 @@ public class SprockellTest {
 	@Test
 	public void simpleArray() {
 		String result = compileAndRunFile("SimpleArray");
-		String output = "012345678901112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
+		String output = "0123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
+		//String output = "3";
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result.replaceAll("\r\n", "\n"));
 	}
@@ -119,7 +120,7 @@ public class SprockellTest {
 		return compileAndRun(new ANTLRInputStream(progStr));
 	}
 	
-	public static String compileAndRunFile(String filename) {
+	public static String compileAndRunFile(String filename) { 
 		try {
 			return compileAndRun(new ANTLRInputStream(new FileReader(new File(BASE_DIR, filename + EXT))));
 		} catch (FileNotFoundException e) {
@@ -133,6 +134,8 @@ public class SprockellTest {
 	public static String compileAndRun(ANTLRInputStream input) {
 		Program prog = Sprockell.compile(input);
 		
+		System.out.println(prog.prettyString(0, true));
+		
 		if (prog == null) {
 			System.out.println("There were errors");
 			return null;
@@ -144,7 +147,7 @@ public class SprockellTest {
 			Runtime rt = Runtime.getRuntime();
 			Process buildPr = rt.exec("ghc -i../sprockell/src -e main test.hs");
 			buildPr.waitFor();
-			
+
 			InputStream is = buildPr.getInputStream();
 			
 			Scanner s = new Scanner(is).useDelimiter("\\A");
@@ -167,4 +170,4 @@ public class SprockellTest {
 			return null;
 		}
 	}
-}
+} 
