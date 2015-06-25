@@ -12,4 +12,6 @@ int program()
 	!
 		false|;
 	.
+	
+	<- 0;
 .

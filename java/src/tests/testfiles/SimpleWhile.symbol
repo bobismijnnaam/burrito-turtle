@@ -4,4 +4,6 @@ int program()
 		i|;
 		i = i + 1;
 	.
+	
+	<- 0;
 .

@@ -7,4 +7,6 @@ int program()
 	-0|; 
 	true|; 
 	false|;
+	
+	<- 0;
 .

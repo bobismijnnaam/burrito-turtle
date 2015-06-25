@@ -30,4 +30,6 @@ int program()
 	a|;
 	b|;
 	c|;
+	
+	<- 0;
 .

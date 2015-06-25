@@ -184,6 +184,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		visit(ctx.expr());
 		prog.emit(Pop, new Reg(RegD));
 		// D = offset, E = Waarde
+		
 		// TODO: Replace with storeAI (store reg => reg, offset)
 		
 		// Waarde mem[arp + offset]
@@ -229,8 +230,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// Get offset from ctx.ID() in RegB
 		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
 		// RegB + RegE -> RegE
-		prog.emit(Compute, new Operator(Sub), new Reg(RegB), new Reg(RegC), new Reg(RegE));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
+		//prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
 		return null;
 	}
 	
@@ -327,10 +328,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			size *= array.indexSize.get(i);
 		}
 		
-		// Waarde mem[arp + offset]
+		// Waarde mem[arp - offset]
 		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
 		// sub?
-		prog.emit(Compute, new Operator(Sub), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
 		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
 		prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
 		return null;

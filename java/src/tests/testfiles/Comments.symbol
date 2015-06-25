@@ -10,4 +10,6 @@ int program()
 	-- They can be combined as well
 	int a {See?} = 5; 
 	-- No worries!
+	
+	<- 0;
 .
