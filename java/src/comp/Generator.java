@@ -224,10 +224,13 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			size *= array.indexSize.get(i);
 		}
 		
+		// In RegC staat nu offset relatief in array
+		
 		// Get offset from ctx.ID() in RegB
 		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
 		// RegB + RegE -> RegE
 		prog.emit(Compute, new Operator(Sub), new Reg(RegB), new Reg(RegC), new Reg(RegE));
+		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
 		return null;
 	}
 	
@@ -323,18 +326,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
 			size *= array.indexSize.get(i);
 		}
-		
-		/*for (ExprContext expr : ctx.expr())
-			visit((ParseTree) expr);
-		
-		Type.Array array = (Array) checkResult.getType(ctx.ID());
-
-		// Get offset from ctx.ID() in RegD
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
-		prog.emit(Const, new Value(array.size()), new Reg(RegD));
-		prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-		// RegB + RegE -> RegE
-		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegE), new Reg(RegE));*/
 		
 		// Waarde mem[arp + offset]
 		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
