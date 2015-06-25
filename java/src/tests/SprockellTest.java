@@ -116,6 +116,45 @@ public class SprockellTest {
 		assertNotNull("Compiling or executing went wrong", result);
 	}
 	
+	@Test
+	public void simpleIncExpr() {
+		String result = compileAndRunFile("SimpleIncExpr");
+		int z = 0;
+		for (int i = 0; i < 11; i++) {
+			z++;
+		}
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(z, 11);
+	}
+	
+	@Test
+	public void simpleDecExpr() {
+		String result = compileAndRunFile("SimpleDecExpr");
+		int z = 30;
+		for (int i = 0; i < 11; i++) {
+			z--;
+		}
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(z, 19);
+	}
+	
+	@Test
+	public void immediateOpAss() {
+		String result = compileAndRunFile("ImmediateOpAss");
+		String output = "";
+		int i = 0;
+		i += 4;
+		output += i;
+		i *= 10;
+		output += i;
+		i /= 10;
+		output += i;
+		i -= 4;
+		output += i;
+		assertEquals(result, output);
+		assertNotNull("Compiling or executing went wrong", result);
+	}
+	
 	public static String compileAndRun(String progStr) {
 		return compileAndRun(new ANTLRInputStream(progStr));
 	}

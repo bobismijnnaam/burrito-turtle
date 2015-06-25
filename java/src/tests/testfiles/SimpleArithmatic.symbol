@@ -1,5 +1,5 @@
 int program()
-	-- Simple Arithmatic tests
+	>> Simple Arithmatic tests
 	int x = 0;
 	int y = 0;
 	int z = 0;
