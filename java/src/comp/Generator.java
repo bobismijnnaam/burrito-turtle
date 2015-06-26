@@ -18,6 +18,7 @@ import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
+import lang.BurritoParser.CharacterExprContext;
 import lang.BurritoParser.DecExprContext;
 import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
@@ -67,7 +68,6 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
-
 import comp.Type.Array;
 
 import static comp.Reach.*;
@@ -86,6 +86,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	private String printBoolLabel;
 	private String printIntLabel;
+	private String printCharLabel;
 	
 	/**
 	 * Puts a new Program instance into prog, and pushes the old one on the stack.
@@ -575,6 +576,15 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 	
 	@Override
+	public List<Instr> visitCharacterExpr(CharacterExprContext ctx) {
+		String c = ctx.CHARACTER().getText();
+		char ch = c.charAt(1);
+		int i = (int) ch;
+		prog.emit(Const, new Value(i), new Reg(RegE));
+		return null;
+	}
+	
+	@Override
 	public List<Instr> visitTrueExpr(TrueExprContext ctx) {
 		prog.emit(Const, new Value(1), new Reg(RegE));
 		return null;
@@ -853,6 +863,29 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 				prog.emit(Const, new Value(returnLabel), new Reg(RegD));
 				prog.emit(Push, new Reg(RegD));
 				prog.emit(Jump, new Target(printIntLabel));
+				prog.emit(returnLabel, Nop);
+			} else if (checkResult.getType(ctx.expr()).equals(new Type.Char())) { 
+				// print a single char
+				if (printCharLabel == null) {
+					printCharLabel = "pipeOp_char";
+					String end = Program.mkLbl(ctx, "end");
+					
+					enterFunc(printCharLabel);
+					// Output it
+					prog.emit(printCharLabel, Write, new Reg(RegE), new MemAddr("stdio"));
+					prog.emit(Jump, new Target(end));
+					
+					prog.emit(end, Pop, new Reg(RegE));
+					prog.emit(Jump, new Target(RegE));
+					
+					leaveFunc();
+				}
+				
+				String returnLabel = Program.mkLbl(ctx, "charreturn");
+
+				prog.emit(Const, new Value(returnLabel), new Reg(RegD));
+				prog.emit(Push, new Reg(RegD));	
+				prog.emit(Jump, new Target(printCharLabel));
 				prog.emit(returnLabel, Nop);
 			} else {
 				System.out.println("Unsupported type given to stdout " + ctx.getText());

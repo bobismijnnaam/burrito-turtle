@@ -155,6 +155,15 @@ public class SprockellTest {
 		assertEquals(result, output);
 		assertNotNull("Compiling or executing went wrong", result);
 	}
+
+	@Test
+	public void simpleChar() {
+		String result = compileAndRunFile("SimpleChar");
+		String output = "Hello world";
+		System.out.println(result);
+		//assertEquals(result, output);
+		assertNotNull("Compiling or executing went wrong", result);
+	}
 	
 	public static String compileAndRun(String progStr, int cores) {
 		return compileAndRun(new ANTLRInputStream(progStr), cores);

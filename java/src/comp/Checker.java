@@ -12,6 +12,8 @@ import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.BoolTypeContext;
+import lang.BurritoParser.CharTypeContext;
+import lang.BurritoParser.CharacterExprContext;
 import lang.BurritoParser.DecExprContext;
 import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.DivAssStatContext;
@@ -117,9 +119,13 @@ public class Checker extends BurritoBaseListener {
 			
 		}
 		
-		// Will always succeed, since if we're in this phase it means that the Function phase succeeded
-		Function.Overload overload = scope.func(funcID).getOverload(args);
-
+		// TODO: Functin overload check sometimes null; checker breaks if not checked on null
+		//Will always succeed, since if we're in this phase it means that the Function phase succeeded
+		Function.Overload overload = null;
+		if (scope.func(funcID) != null) {
+			overload = scope.func(funcID).getOverload(args);
+		}
+		
 		// Push a scope, since we're going into function scope
 		scope.pushScope();
 		// Commit the pushed arguments, so they will be registered as well and are assigned
@@ -178,6 +184,11 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitIntType(IntTypeContext ctx) {
 		setType(ctx, new Type.Int());
+	}
+	
+	@Override
+	public void exitCharType(CharTypeContext ctx) {
+		setType(ctx, new Type.Char());
 	}
 	
 	@Override
@@ -240,6 +251,11 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitNumExpr(NumExprContext ctx) {
 		setType(ctx, new Type.Int());
+	}
+	
+	@Override
+	public void exitCharacterExpr(CharacterExprContext ctx) {
+		setType(ctx, new Type.Char());
 	}
 	
 	@Override
@@ -426,7 +442,7 @@ public class Checker extends BurritoBaseListener {
 		Type type = result.getType(ctx.type());
 		
 		scope.put(id, type);
-		
+
 		setType(ctx.ID(), type);	
 		checkType(ctx.expr(), type);
 		setOffset(ctx.ID(), scope.offset(id));

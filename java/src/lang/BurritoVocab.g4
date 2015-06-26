@@ -35,12 +35,15 @@ RPAR: ')';
 LBRA: '[';
 RBRA: ']';
 
+CHARACTER: '\'' (~'\'' | '\\' '\'') '\''; 
+
 AND: '&&';
 OR: '||';
 XOR: '^';
 
 INT: 'int';
 BOOL: 'bool';
+CHAR: 'char';
 AUTO: '$';
 
 TRUE: ('t' | 'T') 'rue';

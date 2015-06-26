@@ -50,6 +50,7 @@ expr: NOT expr								#notExpr
 	| LPAR expr RPAR						#parExpr
 	| ID									#idExpr
 	| NUM									#numExpr
+	| CHARACTER								#characterExpr
 	| TRUE									#trueExpr
 	| FALSE 								#falseExpr
 	| MIN expr								#negExpr
@@ -58,8 +59,9 @@ expr: NOT expr								#notExpr
 	;
 
 type: INT					#intType 
-	| type LBRA NUM RBRA	#arrayType 
 	| BOOL 					#boolType
+	| CHAR					#charType
+	| type LBRA NUM RBRA	#arrayType  
 	;
 	
 newlines: IONL*;

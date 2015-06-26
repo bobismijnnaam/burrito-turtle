@@ -271,6 +271,22 @@ public class CheckerTest {
 		assertEquals(false, checker.hasErrors());
 	}
 	
+	@Test
+	public void charTest() {
+		String testProgram = "int program() char a = 'a'; .";
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+		try {
+			Result checkResult = checker.check(result);
+			assertEquals(new Type.Char().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(1)).getClass());
+			assertEquals(new Type.Char().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(3)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+	}
+	
 	private ParseTree parse(String testProgram) {
 		CharStream input = new ANTLRInputStream(testProgram);
 		Lexer lexer = new BurritoLexer(input);
