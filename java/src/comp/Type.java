@@ -58,7 +58,7 @@ abstract public class Type {
 		}
 		
 		public Type getBaseType() {
-			if (new Array(null, 0).equals(elemType)) {
+			if (elemType instanceof Array) {
 				return ((Array) elemType).getBaseType();
 			} else {
 				return elemType;
@@ -74,15 +74,6 @@ abstract public class Type {
 		public String toString() {
 			return "array of " + elemType.toString();
 		}
-	}
-	
-	public static void main(String[] args) {
-		Type baseType = new Type.Int();
-		Type index1 = new Type.Array(baseType, 2);
-		Type index2 = new Type.Array(index1, 2);
-		Type index3 = new Type.Array(index2, 2);
-		System.out.println(index3);
-		System.out.println(((Array) index3).getBaseType());
 	}
 	
 	static public class Pointer extends Type {

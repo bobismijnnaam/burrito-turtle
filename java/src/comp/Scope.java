@@ -100,6 +100,7 @@ public class Scope {
 			this.types.put(id, type);
 			this.offsets.put(id, this.size);
 			this.size += size;
+			this.reaches.put(id, Reach.Local);
 		}
 		return result;
 	}

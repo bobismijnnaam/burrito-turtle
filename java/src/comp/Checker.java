@@ -198,16 +198,19 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitIdTarget(IdTargetContext ctx) {
-		setType(ctx, scope.type(ctx.ID().getText()));
-		if (checkType(ctx, getType(ctx)))
-			setOffset(ctx, scope.offset(ctx.ID().getText()));
+		String id = ctx.ID().getText();
+
+		setType(ctx, scope.type(id));
+		if (checkType(ctx, getType(ctx))) {
+			setOffset(ctx, scope.offset(id));
+			setReach(ctx, scope.reach(id));
+		}
 	}
 	
 	// TODO: Bounds checking/dimension checking here?
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
 		String id = ctx.ID().getText();
-//		id = id.split("\\[")[0]; // Superfluous
 		Type.Array array = (Array) this.scope.type(id);
 
 		if (array == null) {
@@ -216,6 +219,8 @@ public class Checker extends BurritoBaseListener {
 			setType(ctx.ID(), array);
 			setType(ctx, array.getBaseType());
 			setOffset(ctx.ID(), this.scope.offset(id));
+			setReach(ctx.ID(), this.scope.reach(id));
+			
 			for (ExprContext expr : ctx.expr()) 
 				checkType(expr, new Type.Int());
 		}
@@ -250,6 +255,7 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx, type);
 		checkType(ctx, type);
 		setOffset(ctx, this.scope.offset(id));
+		setReach(ctx, this.scope.reach(id));
 	}
 	
 	@Override
@@ -260,7 +266,6 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitArrayExpr(ArrayExprContext ctx) {
 		String id = ctx.ID().getText();
-		System.out.println(id);
 		Type.Array array = (Array) this.scope.type(id);
 		if (array == null) {
 			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
@@ -269,6 +274,7 @@ public class Checker extends BurritoBaseListener {
 			
 			setType(ctx, array.getBaseType());
 			setOffset(ctx.ID(), this.scope.offset(id));
+			setReach(ctx.ID(), this.scope.reach(id));
 			for (ExprContext expr : ctx.expr())
 				checkType(expr, new Type.Int()); 
 				// TODO: Check amount of dimensions as well?
@@ -277,18 +283,27 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitIncExpr(IncExprContext ctx) {
-		Type type = this.scope.type(ctx.target().getText());
+		String id = ctx.target().getText();
+
+		Type type = this.scope.type(id);
 		setType(ctx, type);
+		// TODO: Once we support more types than just ints (such as char? Doesn't matter
+		// since it works out but still), we should look at this
 		checkType(ctx, new Type.Int());
-		setOffset(ctx, this.scope.offset(ctx.target().getText()));
+		setOffset(ctx, this.scope.offset(id));
+		setReach(ctx, this.scope.reach(id));
 	}
 	
 	@Override
 	public void exitDecExpr(DecExprContext ctx) {
-		Type type = this.scope.type(ctx.target().getText());
+		String id = ctx.target().getText();
+
+		Type type = this.scope.type(id);
 		setType(ctx, type);
+		// TODO: Here as well - there might be some other increment than just floats
 		checkType(ctx, new Type.Int());
-		setOffset(ctx, this.scope.offset(ctx.target().getText()));
+		setOffset(ctx, this.scope.offset(id));
+		setReach(ctx, this.scope.reach(id));
 	}
 	
 	// TODO At compare check if it is a type that can be compared
@@ -423,7 +438,9 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
 		
-		if (ctx.getChildCount() > 0) {
+		// TODO: Is this correct? Just want to make sure - Bob
+//		if (ctx.getChildCount() > 0) {
+		if (type instanceof Type.Array) {
 			scope.put(id, type, type.size());
 		} else {
 			scope.put(id, type);
@@ -519,6 +536,8 @@ public class Checker extends BurritoBaseListener {
 			if (checkType(ctx.expr(), type)) {
 //				setOffset(ctx.target(), scope.offset(id));
 //				setReach(ctx.target(), scope.reach(id));
+				// ctx.target sets the offset and the reach.
+				// Leaving the comments here for future reference
 			}
 		} else {
 			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
@@ -559,7 +578,6 @@ public class Checker extends BurritoBaseListener {
 			return false;
 		}
 		if (!actual.equals(expected)) {
-			System.out.println(node.parent.getText());
 			addError(node, "Expected type '%s' but found '%s'", expected,
 					actual);
 			return false;

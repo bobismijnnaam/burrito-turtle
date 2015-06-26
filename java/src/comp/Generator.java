@@ -356,7 +356,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		Array array = (Array) checkResult.getType(ctx.ID());
-		System.out.println("SIZE: " + array.indexSize.size());
 		prog.emit(Const, new Value(0), new Reg(RegC));
 		
 		int size = 1;
@@ -482,6 +481,14 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
 		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
 		prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+		
+		System.out.println("Visiting " + ctx.getText());
+		if (checkResult.getReach(ctx) == Reach.Global) {
+			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
+		}
+		if (checkResult.getReach(ctx) == Reach.Local) {
+			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
+		}
 		
 		return null;
 	}

@@ -27,6 +27,12 @@ public class FunctionCollector extends BurritoBaseVisitor<Integer> {
 	// That actually sounds completely doable.
 	// TODO: Make sure when an array is returned it is properly saved on the stack and stuff
 	// TODO: void return type
+	// TODO: When comparing two overloads if they have the same arguments, don't forget to check
+	// if two array arguments are the same size as well. This means, after doing equals(), you have
+	// to upcast them to array and check their sizes!
+	// TODO: Make functions type aware (when doing a function with return type int[2], make it leave 
+	// two integers on the stack, and act accordingly after the expression has evaluated (popping them off
+	// the stack if not needed anymore, etc.)
 	private Scope scope;
 	private ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	private List<String> errors = new ArrayList<>();

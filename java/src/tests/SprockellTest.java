@@ -20,6 +20,12 @@ public class SprockellTest {
 	
 	private final static String BASE_DIR = "src/tests/testfiles";
 	private final static String EXT = ".symbol";
+	
+	@Test
+	public void simpleGlobals() {
+		String result = compileAndRunFile("SimpleGlobals");
+		System.out.println(result);
+	}
 
 	@Test
 	public void fib() {
