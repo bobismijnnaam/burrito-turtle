@@ -46,6 +46,18 @@ abstract public class Type {
 		}
 	}
 	
+	static public class Char extends Type {
+		@Override
+		public int size() {
+			return INT_SIZE;
+		}
+		
+		@Override
+		public String toString() {
+			return "char";
+		}
+	}
+	
 	static public class Array extends Type {
 		public Type elemType;
 		private int size;

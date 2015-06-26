@@ -1,0 +1,88 @@
+int program()
+	helloWorld();
+	showLlama();
+	<- 0;
+.
+
+int showLlama() 
+	char[2] line1;
+	line1[0] = '~';
+	line1[1] = ')';
+	
+	char[6] line2;
+	line2[0] = '(';
+	line2[1] = '_';
+	line2[2] = '-';
+	line2[3] = '-';
+	line2[4] = '-';
+	line2[5] = ';';
+    
+    char[6] line3;
+    line3[0] = ' ';
+    line3[1] = '/';
+    line3[2] = '|';
+    line3[3] = '~';
+    line3[4] = '|';
+    line3[5] = '\';
+    
+    char[6] line4;
+    line4[0] = '/';
+    line4[1] = ' ';
+    line4[2] = '/';
+    line4[3] = ' ';
+    line4[4] = '/';
+    line4[5] = '|';
+
+	
+	int i = 0; i < 2 @
+		line1[i]|;
+		i+;
+	.
+	
+	|\;
+	
+	i = 0; i < 6 @
+		line2[i]|;
+		i+;
+	.
+	
+	|\;
+	
+	i = 0; i < 6 @
+		line3[i]|;
+		i+;
+	.
+	
+	|\;
+	
+	i = 0; i < 6 @
+		line4[i]|;
+		i+;
+	.
+
+	<- 0;
+.
+
+int helloWorld() 
+	char[11] a;
+	a[0] = 'H';
+	a[1] = 'e';
+	a[2] = 'l';
+	a[3] = 'l';
+	a[4] = 'o';
+	a[5] = ' ';
+	a[6] = 'L';
+	a[7] = 'l';
+	a[8] = 'a';
+	a[9] = 'm';
+	a[10] = 'a';
+	
+	int i = 0; i < 11 @
+		a[i]|;
+		i+;
+	.
+	
+	|\\;
+	
+	<- 0;
+.
