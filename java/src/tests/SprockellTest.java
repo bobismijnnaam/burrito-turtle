@@ -23,7 +23,7 @@ public class SprockellTest {
 	
 	@Test
 	public void simpleGlobals() {
-		String result = compileAndRunFile("SimpleGlobals");
+		String result = compileAndRunFile("SimpleGlobals", 20);
 		System.out.println(result);
 	}
 
@@ -156,13 +156,21 @@ public class SprockellTest {
 		assertNotNull("Compiling or executing went wrong", result);
 	}
 	
+	public static String compileAndRun(String progStr, int cores) {
+		return compileAndRun(new ANTLRInputStream(progStr), cores);
+	}
+
 	public static String compileAndRun(String progStr) {
-		return compileAndRun(new ANTLRInputStream(progStr));
+		return compileAndRun(progStr, 1);
 	}
 	
-	public static String compileAndRunFile(String filename) { 
+	public static String compileAndRunFile(String filename) {
+		return compileAndRunFile(filename, 1);
+	}
+	
+	public static String compileAndRunFile(String filename, int cores) {
 		try {
-			return compileAndRun(new ANTLRInputStream(new FileReader(new File(BASE_DIR, filename + EXT))));
+			return compileAndRun(new ANTLRInputStream(new FileReader(new File(BASE_DIR, filename + EXT))), cores);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -172,6 +180,10 @@ public class SprockellTest {
 	}
 	
 	public static String compileAndRun(ANTLRInputStream input) {
+		return compileAndRun(input, 1);
+	}
+	
+	public static String compileAndRun(ANTLRInputStream input, int cores) {
 		Program prog = Sprockell.compile(input);
 		
 		if (prog == null) {
@@ -180,7 +192,7 @@ public class SprockellTest {
 		}
 	
 		try {
-			prog.writeToFile("test.hs");
+			prog.writeToFile("test.hs", cores);
 			
 			Runtime rt = Runtime.getRuntime();
 			Process buildPr = rt.exec("ghc -i../sprockell/src -e main test.hs");
@@ -206,7 +218,7 @@ public class SprockellTest {
 			e.printStackTrace();
 			System.out.println("Stream was empty");
 			return null;
-		}
+		}	
 	}
 	
 	public void assertSanitized(String expected, String actual) {

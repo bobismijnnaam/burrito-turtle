@@ -1,6 +1,7 @@
 package comp;
 
 import static sprockell.Operator.Which.*;
+
 import static sprockell.Program.*;
 import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
@@ -69,10 +70,10 @@ import sprockell.Value;
 
 import comp.Type.Array;
 
+import static comp.Reach.*;
+
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
-	// TODO: Array-to-array assignment (int[2] x; int[2] y; x = y;).
-	// Disallow it and support it in RoR.
 	public final String MAINMETHOD = "program";
 	
 	private Program prog;
@@ -108,6 +109,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return this.prog;
 	}
 
+	// TODO: Initialize static variables
 	@Override
 	public List<Instr> visitProgram(ProgramContext ctx) {
 		endLabel = Program.mkLbl(ctx, "done");
@@ -117,10 +119,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		for (FuncContext asc : ctx.func()) {
 			visit(asc);
 		}
-		
-		// TODO: There are better ways to check this, such as veryifying after the FunctionCollector phase. 
-		// Also, once imports get in here it shouldn't be a problem since a file does not explicitly need a main
-		// If it's imported it doesn't need one
 		
 		// Start making the final program here
 		// First construct the "fake" stack for program()
@@ -194,29 +192,48 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Push, new Reg(RegE));
 		visit(ctx.getChild(3));
 		prog.emit(Pop, new Reg(RegD));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
-		// mem addr => RegB get target value
-		prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
-		prog.emit(Compute, new Operator(op), new Reg(RegC), new Reg(RegE), new Reg(RegE));
-		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+
+		// an offset now resides in RegD
+		Reach reach = checkResult.getReach(ctx);
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
+			// mem addr => RegB get target value
+			prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+			prog.emit(Compute, new Operator(op), new Reg(RegC), new Reg(RegE), new Reg(RegE));
+			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+		} else if (reach ==  Global) {
+			prog.emit(Read, new MemAddr(RegD));
+			prog.emit(Receive, new Reg(RegB));
+			prog.emit(Compute, new Operator(op), new Reg(RegB), new Reg(RegE), new Reg(RegE));
+			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+		}
+		
 		return null;
 	}
 	
+	// TODO: Replace with storeAI (store reg => reg, offset)
 	@Override
 	public List<Instr> visitTypeAssignStat(TypeAssignStatContext ctx) {
 		visit(ctx.expr());
-		// TODO: Replace with storeAI (store reg => reg, offset)
-		Type type = checkResult.getType(ctx.ID());
-		for (int i = 0; i < type.size(); i++) {
-			prog.emit(Push, new Reg(Zero));
+		
+		Reach reach = checkResult.getReach(ctx.ID());
+		
+		if (reach == Global) {
+			System.out.println("[Generator] THIS IS WRONG");
+		} else if (reach == Local) {
+			Type type = checkResult.getType(ctx.ID());
+			for (int i = 0; i < type.size(); i++) {
+				prog.emit(Push, new Reg(Zero));
+			}
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
+			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		}
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
-		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
-
+		
 		return null;
 	}
 	
+	// TODO: Replace with storeAI (store reg => reg, offset)
 	@Override
 	public List<Instr> visitAssStat(AssStatContext ctx) {
 		visit(ctx.target());
@@ -225,11 +242,15 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Pop, new Reg(RegD));
 		// D = offset, E = Waarde
 		
-		// TODO: Replace with storeAI (store reg => reg, offset)
+		Reach reach = checkResult.getReach(ctx.target());
+		if (reach == Local) {
+			// Waarde mem[arp + offset]
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
+			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+		} else if (reach == Global) {
+			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+		}
 		
-		// Waarde mem[arp + offset]
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
-		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		return null;
 	}
 	
@@ -237,6 +258,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitTypeStat(TypeStatContext ctx) {
 		visit(ctx.type());
 		
+		if (checkResult.getReach(ctx.ID()) != Local) System.out.println("[Generator] This can;t be global, has to be local");
+
 		Type type = checkResult.getType(ctx.ID());
 		for (int i = 0; i < type.size(); i++) {
 			prog.emit(Push, new Reg(Zero));
@@ -245,6 +268,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	// TODO: Do reach magic here
 	@Override
 	public List<Instr> visitArrayTarget(ArrayTargetContext ctx) {
 		for (ExprContext expr : ctx.expr()) {
@@ -269,10 +293,11 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// Get offset from ctx.ID() in RegB
 		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
 		// RegB + RegE -> RegE
+		
 		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
-		//prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
 		return null;
 	}
+	//prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
 	
 	@Override
 	public List<Instr> visitIdTarget(IdTargetContext ctx) {
@@ -348,6 +373,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	// TODO: Something with stack length here
+	// The idea is that we switch from the premise of "after expr RegE will contain the result"
+	// to "after expr the stack will point to the integer after the last integer of the result"
+	// The type (and thus the size) is known at compile time so this should be possible
+	// Also once you do that using objects becomes far more likely
+	// And pass-by-value arrays ^^
 	@Override
 	public List<Instr> visitArrayExpr(ArrayExprContext ctx) {
 		for (ExprContext expr : ctx.expr()) {
@@ -369,10 +400,17 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 		// Waarde mem[arp - offset]
 		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
-		// sub?
 		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
-		prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+		
+		Reach reach = checkResult.getReach(ctx.ID());
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
+			prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+		} else if (reach == Global) {
+			prog.emit(Read, new MemAddr(RegC));
+			prog.emit(Receive, new Reg(RegE));
+		}
+
 		return null;
 	}
 	
@@ -380,11 +418,25 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitIncExpr(IncExprContext ctx) {
 		visit(ctx.target());
 		
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
-		prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		Reach reach = checkResult.getReach(ctx);
+		
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
+			prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		} else if (reach == Global) {
+			prog.emit(Read, new MemAddr(RegE));
+			prog.emit(Receive, new Reg(RegC));
+		}
+
 		prog.emit(Const, new Value(ctx.PLUS().size()), new Reg(RegD));
-		prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegD), new Reg(RegE));
-		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+		prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegD), new Reg(RegD));
+
+		if (reach == Local) {
+			prog.emit(Store, new Reg(RegD), new MemAddr(RegB));
+		} else if (reach == Global) {
+			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
+		}
+
 		return null;
 	}
 	
@@ -392,11 +444,25 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitDecExpr(DecExprContext ctx) {
 		visit(ctx.target());
 		
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
-		prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		Reach reach = checkResult.getReach(ctx);
+		
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
+			prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
+		} else if (reach == Global) {
+			prog.emit(Read, new MemAddr(RegE));
+			prog.emit(Receive, new Reg(RegC));
+		}
+
 		prog.emit(Const, new Value(ctx.MIN().size()), new Reg(RegD));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegC), new Reg(RegD), new Reg(RegE));
-		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+		prog.emit(Compute, new Operator(Sub), new Reg(RegC), new Reg(RegD), new Reg(RegD));
+
+		if (reach == Local) {
+			prog.emit(Store, new Reg(RegD), new MemAddr(RegB));
+		} else if (reach == Global) {
+			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
+		}
+
 		return null;
 	}
 	
@@ -478,16 +544,23 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitIdExpr(IdExprContext ctx) {
-		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
-		prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+//		System.out.println("Visiting " + ctx.getText());
+//		if (checkResult.getReach(ctx) == Reach.Global) {
+//			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
+//		}
+//		if (checkResult.getReach(ctx) == Reach.Local) {
+//			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
+//		}
 		
-		System.out.println("Visiting " + ctx.getText());
-		if (checkResult.getReach(ctx) == Reach.Global) {
-			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
-		}
-		if (checkResult.getReach(ctx) == Reach.Local) {
-			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
+		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
+		
+		Reach reach = checkResult.getReach(ctx);
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
+			prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+		} else if (reach == Global) {
+			prog.emit(Read, new MemAddr(RegB));
+			prog.emit(Receive, new Reg(RegE));
 		}
 		
 		return null;
@@ -539,6 +612,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Const, new Value(returnLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE));
 		
+		// TODO: Make this size aware (e.g. with arrays, push more than one if needed.
+		// Don't forget to also support this in the checker!
 		for (ExprContext expr : ctx.expr()) {
 			visit(expr);
 			prog.emit(Push, new Reg(RegE));
@@ -577,6 +652,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	// TODO: Make this size-aware as well
 	@Override
 	public List<Instr> visitReturnStat(ReturnStatContext ctx) {
 		if (ctx.expr() != null) {
@@ -626,10 +702,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	/**
-	 * TODO: Make sure it's called like a function instead of just pasted in the source
-	 * Do this for both bool and integer. Test it as well! And wonder at the marvelous efficiency!
-	 */
 	@Override
 	public List<Instr> visitOutStat(OutStatContext ctx) {
 		if (ctx.expr() != null) {

@@ -1,10 +1,15 @@
 int gA = 0;
-int gB = 100;
-int gC = 12;
-int gD = 100;
 
 int program()
-	int a;
-	int b;
-	b = a + gD;
+	int i = 0; i < 100 @
+		gA+;
+		gA+;
+		gA+;
+		gA+;
+		gA-;
+		gA-;
+		gA-;
+		gA-;
+	i++; .
+	gA|\;
 .

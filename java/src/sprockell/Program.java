@@ -133,6 +133,10 @@ public class Program {
 	 * @throws FileNotFoundException Not sure why this would ever happen
 	 */
 	public void writeToFile(String fileName) throws FileNotFoundException {
+		writeToFile(fileName, 1);
+	}
+	
+	public void writeToFile(String fileName, int cores) throws FileNotFoundException {
 		PrintWriter writer = new PrintWriter(fileName);
 		
 		writer.println("import Sprockell.System\n");
@@ -140,7 +144,7 @@ public class Program {
 		
 		writer.println(prettyString(2, false) + "\n\t\t]");
 		
-		writer.println("main = run 1 prog");
+		writer.println("main = run " + cores + " prog");
 		
 		writer.close();
 	}
