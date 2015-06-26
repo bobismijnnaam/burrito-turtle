@@ -219,7 +219,7 @@ public class Checker extends BurritoBaseListener {
 			setType(ctx.ID(), array);
 			setType(ctx, array.getBaseType());
 			setOffset(ctx.ID(), this.scope.offset(id));
-			setReach(ctx.ID(), this.scope.reach(id));
+			setReach(ctx, this.scope.reach(id));
 			
 			for (ExprContext expr : ctx.expr()) 
 				checkType(expr, new Type.Int());
@@ -515,6 +515,7 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitAssStat(AssStatContext ctx) {
+		// Not sure if these comments are ready to be deleted :p
 //		String id = ctx.target().;
 		
 //		Type type = this.scope.type(id);

@@ -249,6 +249,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		} else if (reach == Global) {
 			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+		} else {
+			System.out.println(ctx.target().getText() + " has no reach set!");
 		}
 		
 		return null;

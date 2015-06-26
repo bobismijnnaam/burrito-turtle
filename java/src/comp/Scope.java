@@ -1,12 +1,13 @@
 package comp;
 
 import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import comp.Type.Pointer;
+import static comp.Reach.*;
 
 public class Scope {
 	class Arg {
@@ -78,7 +79,7 @@ public class Scope {
 			this.types.put(id, type);
 			this.offsets.put(id, this.size);
 			this.size += type.size();
-			this.reaches.put(id, Reach.Local);
+			this.reaches.put(id, Local);
 		}
 		return result;
 	}
@@ -89,7 +90,7 @@ public class Scope {
 			this.types.put(id, type);
 			this.offsets.put(id,  this.globalSize);
 			this.globalSize += type.size();
-			this.reaches.put(id, Reach.Global);
+			this.reaches.put(id, Global);
 		}
 		return result;
 	}
@@ -100,7 +101,7 @@ public class Scope {
 			this.types.put(id, type);
 			this.offsets.put(id, this.size);
 			this.size += size;
-			this.reaches.put(id, Reach.Local);
+			this.reaches.put(id, Local);
 		}
 		return result;
 	}
@@ -139,6 +140,7 @@ public class Scope {
 		arg.id = id;
 		arg.type = type;
 		argList.add(arg);
+		reaches.put(id, Local);
 		
 		return true;
 	}
@@ -149,7 +151,7 @@ public class Scope {
 			return false;
 		}
 		
-		int leftMargin = 0;
+		int leftMargin = 0;	
 		for (Arg arg : argList) {
 			types.put(arg.id, arg.type);
 			leftMargin -= type(arg.id).size();
