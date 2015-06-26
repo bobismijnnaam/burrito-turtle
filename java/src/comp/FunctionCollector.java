@@ -25,6 +25,8 @@ public class FunctionCollector extends BurritoBaseVisitor<Integer> {
 	// TODO: Return statement checking (can probably be done with that flow thingy)
 	// Or maybe another visitor, or maybe this one. Each branch should just eventually reach a return statement
 	// That actually sounds completely doable.
+	// TODO: Make sure when an array is returned it is properly saved on the stack and stuff
+	// TODO: void return type
 	private Scope scope;
 	private ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	private List<String> errors = new ArrayList<>();

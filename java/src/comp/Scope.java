@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import comp.Type.Pointer;
+
 public class Scope {
 	class Arg {
 		public Type type;
@@ -15,18 +17,22 @@ public class Scope {
 	/** Current size of this scope (in bytes). 
 	 * Used to calculate offsets of newly declared variables. */
 	private int size;
+	private int globalSize;
 	/** Map from declared variables to their types. */
 	private Map<String, Type> types = new HashMap<String, Type>();
 	/** Map from declared variables to their offset within the allocation
 	 * record of this scope. */
 	private Map<String, Integer> offsets = new HashMap<String, Integer>();
 	private Map<String, Function> functions = new HashMap<>();
+	private Map<String, Reach> reaches = new HashMap<>();
 	
 	private List<Arg> argList = new ArrayList<>();
 	
 	private Stack<Integer> sizeStack = new Stack<Integer>();
 	private Stack<Map<String, Type>> typeStack = new Stack<Map<String, Type>>();
 	private Stack<Map<String, Integer>> offsetStack = new Stack<Map<String, Integer>>();
+	private Stack<Map<String, Reach>> reachesStack = new Stack<Map<String, Reach>>();
+	
 	private boolean recordingArgs;
 	
 	/**
@@ -36,6 +42,7 @@ public class Scope {
 		size = sizeStack.pop();
 		types = typeStack.pop();
 		offsets = offsetStack.pop();
+		reaches = reachesStack.pop();
 	}
 	
 	/**
@@ -45,6 +52,7 @@ public class Scope {
 		sizeStack.push(size);
 		typeStack.push(new HashMap<String, Type>(types));
 		offsetStack.push(new HashMap<String, Integer>(offsets));
+		reachesStack.push(new HashMap<String, Reach>(reaches));
 	}
 
 	/**
@@ -70,6 +78,18 @@ public class Scope {
 			this.types.put(id, type);
 			this.offsets.put(id, this.size);
 			this.size += type.size();
+			this.reaches.put(id, Reach.Local);
+		}
+		return result;
+	}
+	
+	public boolean putGlobal(String id, Type type) {
+		boolean result = !this.types.containsKey(id);
+		if (result) {
+			this.types.put(id, type);
+			this.offsets.put(id,  this.globalSize);
+			this.globalSize += type.size();
+			this.reaches.put(id, Reach.Global);
 		}
 		return result;
 	}
@@ -167,5 +187,9 @@ public class Scope {
 	
 	public int getCurrentStackSize() {
 		return size;
+	}
+	
+	public Reach reach(String id) {
+		return this.reaches.get(id);
 	}
 }

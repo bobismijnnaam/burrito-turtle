@@ -56,6 +56,14 @@ abstract public class Type {
 			this.size = size;
 			this.indexSize = new ArrayList<Integer>();
 		}
+		
+		public Type getBaseType() {
+			if (new Array(null, 0).equals(elemType)) {
+				return ((Array) elemType).getBaseType();
+			} else {
+				return elemType;
+			}
+		}
 
 		@Override
 		public int size() {
@@ -64,8 +72,34 @@ abstract public class Type {
 
 		@Override
 		public String toString() {
-			return "Array";
+			return "array of " + elemType.toString();
+		}
+	}
+	
+	public static void main(String[] args) {
+		Type baseType = new Type.Int();
+		Type index1 = new Type.Array(baseType, 2);
+		Type index2 = new Type.Array(index1, 2);
+		Type index3 = new Type.Array(index2, 2);
+		System.out.println(index3);
+		System.out.println(((Array) index3).getBaseType());
+	}
+	
+	static public class Pointer extends Type {
+		public Type pointsTo;
+		
+		public Pointer(Type pointsTo) {
+			this.pointsTo = pointsTo;
 		}
 		
+		@Override
+		public String toString() {
+			return "pointer to " + pointsTo.toString();
+		}
+
+		@Override
+		public int size() {
+			return INT_SIZE;
+		}
 	}
 }

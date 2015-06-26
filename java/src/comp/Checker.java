@@ -13,6 +13,7 @@ import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.BoolTypeContext;
 import lang.BurritoParser.DecExprContext;
+import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
@@ -85,6 +86,17 @@ public class Checker extends BurritoBaseListener {
 	
 	//*************************
 	// START OF TYPE CHECKING
+	
+	// GLOBALS -----------------------
+	
+	// TODO: Put this in a separate visitor, just like FunctionCollector
+	@Override
+	public void exitDecl(DeclContext ctx) {
+		checkType(ctx.type(), getType(ctx.expr()));
+		
+		String id = ctx.ID().getText();
+		scope.putGlobal(id, getType(ctx.type()));
+	}
 	
 	// FUNCTIONS ---------------------
 	
@@ -171,19 +183,17 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitArrayType(ArrayTypeContext ctx) {
 		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
-		if (getType(ctx.type()).toString().equals("Array")) {
+		
+		// TODO: Though the third one was the cleanest, but leaving the alternatives here for future reference
+//		if (getType(ctx.type()).toString().equals("Array")) {
+//		if (getType(ctx.type()).equals((new Type.Array(null, 0)))) {
+		if (getType(ctx.type()) instanceof Type.Array) {
 			Type.Array innerArray = (Array) getType(ctx.type());
 			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
 		}
 		
 		array.indexSize.add(new Integer(ctx.NUM().getText()));
 		setType(ctx, array);
-		
-		/*
-		System.out.println(ctx.getText());
-		for (int index : array.indexSize) {
-			System.out.println(index);
-		}*/
 	}
 	
 	@Override
@@ -193,17 +203,18 @@ public class Checker extends BurritoBaseListener {
 			setOffset(ctx, scope.offset(ctx.ID().getText()));
 	}
 	
+	// TODO: Bounds checking/dimension checking here?
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
 		String id = ctx.ID().getText();
-		id = id.split("\\[")[0];
+//		id = id.split("\\[")[0]; // Superfluous
 		Type.Array array = (Array) this.scope.type(id);
 
 		if (array == null) {
 			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
 		} else {
 			setType(ctx.ID(), array);
-			setType(ctx, array.elemType);
+			setType(ctx, array.getBaseType());
 			setOffset(ctx.ID(), this.scope.offset(id));
 			for (ExprContext expr : ctx.expr()) 
 				checkType(expr, new Type.Int());
@@ -249,21 +260,18 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitArrayExpr(ArrayExprContext ctx) {
 		String id = ctx.ID().getText();
-		id = id.split("\\[")[0];
+		System.out.println(id);
 		Type.Array array = (Array) this.scope.type(id);
 		if (array == null) {
 			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
 		} else {
 			setType(ctx.ID(), array);
 			
-			while (array.elemType.toString().equals("Array")) {
-					array = (Array) array.elemType;
-			}
-			
-			setType(ctx, array.elemType);
+			setType(ctx, array.getBaseType());
 			setOffset(ctx.ID(), this.scope.offset(id));
 			for (ExprContext expr : ctx.expr())
-				checkType(expr, new Type.Int());
+				checkType(expr, new Type.Int()); 
+				// TODO: Check amount of dimensions as well?
 		}
 	}
 	
@@ -380,26 +388,6 @@ public class Checker extends BurritoBaseListener {
 		
 		Function func = scope.func(funcID);
 		
-		// Check if argument length matches
-//		if (func.args.length != ctx.expr().size()) {
-//			addError(ctx, "Inappropriate amount of arguments in function call of \""
-//					+ funcID 
-//					+ "\". Expected " + func.args.length + ", received " + ctx.expr().size());
-//			return;
-//		}
-		
-		// Check if argument types match
-//		for (int i = 0; i < ctx.expr().size(); i++) {
-//			Type givenType = getType(ctx.expr(i));
-//			Type expectedType = func.args[i];
-//			if (!givenType.equals(expectedType)) {
-//				addError(ctx, "Inappropriate type found for argument " + i + " in function call of \""
-//						+ funcID
-//						+ "\". Expected " + expectedType.toString() + ", but found " + givenType.toString());
-//				return;
-//			}
-//		}
-		
 		// Build argument list of function call
 		Type[] callArgs = new Type[ctx.expr().size()];
 		for (int i = 0; i < ctx.expr().size(); i++) {
@@ -411,8 +399,8 @@ public class Checker extends BurritoBaseListener {
 		}
 		
 		// Set return type of function as expression type
-		// Set the function to the ID for the generator
 		setType(ctx, scope.func(funcID).returnType);
+		// Attach the function to the ID for the generator
 		setFunction(ctx.ID(), overload);
 	}
 	
@@ -427,6 +415,7 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx.ID(), type);	
 		checkType(ctx.expr(), type);
 		setOffset(ctx.ID(), scope.offset(id));
+		setReach(ctx.ID(), scope.reach(id));
 	}
 	
 	@Override
@@ -442,6 +431,7 @@ public class Checker extends BurritoBaseListener {
 		
 		setType(ctx.ID(), type);		
 		setOffset(ctx.ID(), scope.offset(id));
+		setReach(ctx.ID(), scope.reach(id));
 	}
 
 	
@@ -479,21 +469,27 @@ public class Checker extends BurritoBaseListener {
 	private void checkAssignment(ParseTree ctx) {
 		String id = ctx.getChild(0).getText();
 		
-		Type type = this.scope.type(id);
-		if (id.contains("[")) {
-			id = id.split("\\[")[0];
-			Type.Array array = (Array) this.scope.type(id);
-			if (array != null) {
-				type = array.elemType;
-				while (type.toString().equals("Array")) {
-					type = ((Type.Array) type).elemType;
-				}
-			}
+//		Type type = this.scope.type(id);
+		// TODO: This seemed cleaner, but leaving it here for future reference
+		Type type = getType(ctx.getChild(0));
+		if (type instanceof Type.Array) {
+			type = ((Array) type).getBaseType();
 		}
+//		if (id.contains("[")) {
+//			id = id.split("\\[")[0];
+//			Type.Array array = (Array) this.scope.type(id);
+//			if (array != null) {
+//				type = array.elemType;
+//				while (type.toString().equals("Array")) {
+//					type = ((Type.Array) type).elemType;
+//				}
+//			}
+//		}
 		
 		if (type != null) {
 			if (checkType((ParserRuleContext) ctx.getChild(3), type)) {
 				setOffset((ParserRuleContext) ctx.getChild(0), scope.offset(id));
+				setReach(ctx, scope.reach(id));
 			}
 		} else {
 			addError((ParserRuleContext) ctx.getChild(0), "Missing inferred type of " + ctx.getChild(0).getText());
@@ -502,23 +498,27 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitAssStat(AssStatContext ctx) {
-		String id = ctx.target().getText();
+//		String id = ctx.target().;
 		
-		Type type = this.scope.type(id);
-		if (id.contains("[")) {
-			id = id.split("\\[")[0];
-			Type.Array array = (Array) this.scope.type(id);
-			if (array != null) {
-				type = array.elemType;
-				while (type.toString().equals("Array")) {
-					type = ((Type.Array) type).elemType;
-				}
-			}
-		}
+//		Type type = this.scope.type(id);
+//		if (id.contains("[")) {
+//			id = id.split("\\[")[0];
+//			Type.Array array = (Array) this.scope.type(id);
+//			if (array != null) {
+//				type = array.elemType;
+//				while (type.toString().equals("Array")) {
+//					type = ((Type.Array) type).elemType;
+//				}
+//			}
+//		}
+				
+		Type type = getType(ctx.target());
+//		String id = null;
 		
 		if (type != null) {
 			if (checkType(ctx.expr(), type)) {
-				setOffset(ctx.target(), scope.offset(id));
+//				setOffset(ctx.target(), scope.offset(id));
+//				setReach(ctx.target(), scope.reach(id));
 			}
 		} else {
 			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
@@ -559,6 +559,7 @@ public class Checker extends BurritoBaseListener {
 			return false;
 		}
 		if (!actual.equals(expected)) {
+			System.out.println(node.parent.getText());
 			addError(node, "Expected type '%s' but found '%s'", expected,
 					actual);
 			return false;
@@ -617,4 +618,11 @@ public class Checker extends BurritoBaseListener {
 		this.result.setStackSize(node, currentStackSize);
 	}
 
+	private void setReach(ParseTree node, Reach reach) {
+		this.result.setReach(node, reach);
+	}
+	
+	private Reach getReach(ParseTree node) {
+		return this.result.getReach(node);
+	}
 }

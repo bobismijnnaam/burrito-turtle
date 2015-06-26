@@ -69,7 +69,10 @@ import sprockell.Value;
 
 import comp.Type.Array;
 
+
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
+	// TODO: Array-to-array assignment (int[2] x; int[2] y; x = y;).
+	// Disallow it and support it in RoR.
 	public final String MAINMETHOD = "program";
 	
 	private Program prog;
@@ -264,7 +267,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// In RegC staat nu offset relatief in array
 		
 		// Get offset from ctx.ID() in RegB
-		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
 		// RegB + RegE -> RegE
 		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
 		//prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
@@ -353,6 +356,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		Array array = (Array) checkResult.getType(ctx.ID());
+		System.out.println("SIZE: " + array.indexSize.size());
 		prog.emit(Const, new Value(0), new Reg(RegC));
 		
 		int size = 1;
