@@ -1,0 +1,59 @@
+[PREFACE] The official Symbol reference 
+Bob Rubbens and Ruben Haasjes 
+University of Twente, Enschede, June 2015
+
+This reference contains information about the 
+symbol programming language. The language was
+developed during the "Programming Paradigm" module
+of the bachelor of Computer Science. This 
+reference explains how the language works and the
+design choices behind it. The key idea behind
+Symbol is, that people should be able to compute
+what they want, without having to type to much.
+This is done by taking frequently used structures
+minimizing these structures and where possible
+replace keywords with symbols; hence the name of 
+the language "Symbol" was born.
+
+[CREDITS] Special thanks to Arend Rensink for the
+useful lectures about compiler construction.
+
+
+[CHAPTER I LEXICAL ELEMENTS "TOKENS"]
+
+[I.I] Identifiers
+
+Identifiers are used to name variables and 
+functions. Identifiers should start with a letter
+(a-zA-Z) and contain at least one letter. Behind
+the letter can be as much letters or digits as 
+desired.
+
+[I.II] Symbols "Keywords"
+
+Symbol aims to use as little Keywords as possible
+and instead use symbols. Below a list with all the
+used symbols. The usage of these symbols will be
+described later on in this reference.
+
+@, !, #, $, --, ~, ?, /, \, |, {, }
+
+[I.III] Operators
+
+The following operators are supported: +, /, *, -,
+%, the uses will be discussed in more detail later.
+
+[CHAPTER II DATA TYPES]
+
+[II.I] Integer
+
+[II.II] Bool
+
+[II.III] Char
+
+[II.IV] Array
+
+
+
+											
+
