@@ -7,6 +7,11 @@ import java.util.Map;
 import java.util.Stack;
 
 public class Scope {
+	class Arg {
+		public Type type;
+		public String id;
+	}
+	
 	/** Current size of this scope (in bytes). 
 	 * Used to calculate offsets of newly declared variables. */
 	private int size;
@@ -15,15 +20,14 @@ public class Scope {
 	/** Map from declared variables to their offset within the allocation
 	 * record of this scope. */
 	private Map<String, Integer> offsets = new HashMap<String, Integer>();
-	private Map<String, Function> functions = new HashMap<String, Function>();
+	private Map<String, Function> functions = new HashMap<>();
 	
-	private List<String> argList = new ArrayList<String>();
+	private List<Arg> argList = new ArrayList<>();
 	
 	private Stack<Integer> sizeStack = new Stack<Integer>();
 	private Stack<Map<String, Type>> typeStack = new Stack<Map<String, Type>>();
 	private Stack<Map<String, Integer>> offsetStack = new Stack<Map<String, Integer>>();
-	
-	// TODO: Implement function pushing popping
+	private boolean recordingArgs;
 	
 	/**
 	 * Pops the previous scope state off the stack, restoring previous sizes, type mappings, etc.
@@ -80,39 +84,63 @@ public class Scope {
 		return result;
 	}
 	
-	public boolean putFunc(String id, String label, Type returnType, Type... args) {
-		Function func = new Function();
-		func.id = id;
-		func.label = label;
-		func.args = args;
-		func.returnType = returnType;
-		
-		functions.put(id, func);
-		
-		return true;
+	public String putFunc(String id, String label, Type returnType, Type... args) {
+		if (!functions.containsKey(id)) functions.put(id, new Function(id, returnType));
+		Function func = functions.get(id);
+		if (!func.returnType.equals(returnType)) return "A function can only have one return type"
+				+ " across overloads";
+
+		return func.registerOverload(args, label);
 	}
 	
-	public boolean putArg(String id, Type type) {
-		types.put(id, type);
-		argList.add(id);
-		
-//		System.out.println("Registered " + id + " of type " + type);
-		
-		return true;
-	}
-	
-	public boolean finishArgs() {
-		int leftMargin = 0;
-		for (String id : argList) {
-			leftMargin -= type(id).size();
+	public boolean startArgRecording() {
+		if (!recordingArgs && argList.size() == 0) {
+			recordingArgs = true;
+			return true;
+		} else if (recordingArgs) {
+			System.out.println("Argument capture was not stopped with finishArgs() before");
+			return false;
+		} else if (argList.size() > 0) {
+			System.out.println("There were already arguments in the list before starting");
+			return false;
 		}
 		
-		for (String id : argList) {
-			offsets.put(id, leftMargin);
-			leftMargin += type(id).size();
+		return false;
+	}
+	
+	public boolean recordArg(String id, Type type) {
+		if (!recordingArgs) {
+			System.out.println("Argument recording hasn't been started");
+			return false;
+		}
+		
+		Arg arg = new Arg();
+		arg.id = id;
+		arg.type = type;
+		argList.add(arg);
+		
+		return true;
+	}
+	
+	public boolean finishArgRecording() {
+		if (!recordingArgs) {
+			System.out.println("Argument recording was not started");
+			return false;
+		}
+		
+		int leftMargin = 0;
+		for (Arg arg : argList) {
+			types.put(arg.id, arg.type);
+			leftMargin -= type(arg.id).size();
+		}
+		
+		for (Arg arg : argList) {
+			offsets.put(arg.id, leftMargin);
+			leftMargin += types.get(arg.id).size();
 		}
 		
 		argList.clear();
+		recordingArgs = false;
 		
 		return true;
 	}

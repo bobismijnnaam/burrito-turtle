@@ -1,7 +1,6 @@
 package comp;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import lang.BurritoBaseListener;
@@ -42,6 +41,7 @@ import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
+import lang.BurritoParser.SigContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -66,7 +66,11 @@ public class Checker extends BurritoBaseListener {
 	private List<String> errors;
 	
 	public Result check(ParseTree tree) throws ParseException {
-		this.scope = new Scope();
+		return check(tree, new Scope());
+	}
+	
+	public Result check(ParseTree tree, Scope scope) throws ParseException {
+		this.scope = scope;
 		this.result = new Result();
 		this.errors = new ArrayList<>();
 		
@@ -85,25 +89,32 @@ public class Checker extends BurritoBaseListener {
 	// FUNCTIONS ---------------------
 	
 	@Override
+	public void enterSig(SigContext ctx) {
+		if (!scope.startArgRecording()) {
+			System.out.println("Something went wrong with the arguments");
+		}
+	}
+	
+	@Override
 	public void exitSig(lang.BurritoParser.SigContext ctx) {
+		// Get signature of function
 		String funcID = ctx.ID().getText(); // Get function ID
-		Type returnType = getType(ctx.type()); // Get return type
 		Type[] args = new Type[ctx.arg().size()]; // Aggregate argument types
 		for (int i = 0; i < ctx.arg().size(); i++) {
 			args[i] = getType(ctx.arg(i));
 			
 		}
-		String label = Program.mkLbl(ctx, "function_" + funcID); // Make a label
+		
+		// Will always succeed, since if we're in this phase it means that the Function phase succeeded
+		Function.Overload overload = scope.func(funcID).getOverload(args);
 
-		// Register the function
-		scope.putFunc(funcID, label, returnType, args);
 		// Push a scope, since we're going into function scope
 		scope.pushScope();
 		// Commit the pushed arguments, so they will be registered as well and are assigned
 		// a negative offset
-		scope.finishArgs();
+		scope.finishArgRecording();
 
-		setFunction(ctx.parent, scope.func(funcID)); // TODO: Is this needed/used?
+		setFunction(ctx.parent, overload);
 	};
 	
 	@Override
@@ -111,7 +122,7 @@ public class Checker extends BurritoBaseListener {
 		String argID = ctx.ID().getText();
 		Type argType = getType(ctx.type());
 
-		scope.putArg(argID, argType);
+		scope.recordArg(argID, argType);
 
 		setType(ctx, argType);
 	}
@@ -122,8 +133,26 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	public void exitReturnStat(lang.BurritoParser.ReturnStatContext ctx) {
-		Function func = getFunction(ctx.parent);
-		checkType(ctx.expr(), func.returnType);
+		// Find enclosing function
+		// Should be attached to the func node
+		Function.Overload func = null;
+		ParseTree curr = ctx;
+		while (func == null && curr != null) {
+			func = getFunction(curr);
+			curr = curr.getParent();
+		}
+		
+		// If not found, report an error
+		if (curr == null && func == null) {
+			addError(ctx, "Return value found without enclosing function");
+			return;
+		}
+		
+		// Otherwise, attach it to the return node
+		setFunction(ctx, func);
+		
+		checkType(ctx.expr(), func.func.returnType);
+		// Set the current stack size so it can be unwound
 		setStackSize(ctx, scope.getCurrentStackSize());
 	};
 	
@@ -254,7 +283,7 @@ public class Checker extends BurritoBaseListener {
 		setOffset(ctx, this.scope.offset(ctx.target().getText()));
 	}
 	
-	// TODO , By compare check if it is a type that can be compared
+	// TODO At compare check if it is a type that can be compared
 	@Override
 	public void exitGtExpr(GtExprContext ctx) {
 		checkTypeCompare(ctx);
@@ -352,29 +381,39 @@ public class Checker extends BurritoBaseListener {
 		Function func = scope.func(funcID);
 		
 		// Check if argument length matches
-		if (func.args.length != ctx.expr().size()) {
-			addError(ctx, "Inappropriate amount of arguments in function call of \""
-					+ funcID 
-					+ "\". Expected " + func.args.length + ", received " + ctx.expr().size());
-			return;
-		}
+//		if (func.args.length != ctx.expr().size()) {
+//			addError(ctx, "Inappropriate amount of arguments in function call of \""
+//					+ funcID 
+//					+ "\". Expected " + func.args.length + ", received " + ctx.expr().size());
+//			return;
+//		}
 		
 		// Check if argument types match
+//		for (int i = 0; i < ctx.expr().size(); i++) {
+//			Type givenType = getType(ctx.expr(i));
+//			Type expectedType = func.args[i];
+//			if (!givenType.equals(expectedType)) {
+//				addError(ctx, "Inappropriate type found for argument " + i + " in function call of \""
+//						+ funcID
+//						+ "\". Expected " + expectedType.toString() + ", but found " + givenType.toString());
+//				return;
+//			}
+//		}
+		
+		// Build argument list of function call
+		Type[] callArgs = new Type[ctx.expr().size()];
 		for (int i = 0; i < ctx.expr().size(); i++) {
-			Type givenType = getType(ctx.expr(i));
-			Type expectedType = func.args[i];
-			if (!givenType.equals(expectedType)) {
-				addError(ctx, "Inappropriate type found for argument " + i + " in function call of \""
-						+ funcID
-						+ "\". Expected " + expectedType.toString() + ", but found " + givenType.toString());
-				return;
-			}
+			callArgs[i] = getType(ctx.expr(i));
+		}
+		Function.Overload overload = func.getOverload(callArgs); 
+		if (overload == null) {
+			addError(ctx, "No appropriate overload found for function \"" + func.id + "\". Available overloads are: " + func);
 		}
 		
 		// Set return type of function as expression type
 		// Set the function to the ID for the generator
 		setType(ctx, scope.func(funcID).returnType);
-		setFunction(ctx.ID(), scope.func(funcID));
+		setFunction(ctx.ID(), overload);
 	}
 	
 	// STATS ----------------------------
@@ -566,11 +605,11 @@ public class Checker extends BurritoBaseListener {
 		return this.result.getType(node);
 	}
 	
-	private void setFunction(ParseTree node, Function function) {
+	private void setFunction(ParseTree node, Function.Overload function) {
 		this.result.setFunction(node, function);
 	}
 	
-	private Function getFunction(ParseTree node) {
+	private Function.Overload getFunction(ParseTree node) {
 		return this.result.getFunction(node);
 	}
 

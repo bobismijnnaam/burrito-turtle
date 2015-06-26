@@ -1,9 +1,6 @@
 package tests;
 
 import static org.junit.Assert.*;
-import static sprockell.Operator.Which.*;
-import static sprockell.Reg.Which.*;
-import static sprockell.Sprockell.Op.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,33 +10,24 @@ import java.io.InputStream;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import lang.BurritoLexer;
-import lang.BurritoParser;
-
 import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.Lexer;
-import org.antlr.v4.runtime.TokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
-import sprockell.MemAddr;
-import sprockell.Operator;
 import sprockell.Program;
-import sprockell.Reg;
 import sprockell.Sprockell;
-import sprockell.Target;
-import sprockell.Value;
-import comp.Checker;
-import comp.Generator;
-import comp.ParseException;
-import comp.Result;
 
 public class SprockellTest { 
 	
 	private final static String BASE_DIR = "src/tests/testfiles";
 	private final static String EXT = ".symbol";
+
+	@Test
+	public void fib() {
+		String result = compileAndRunFile("Fib");
+		String output = "0\n1\n3\n8\n21\n55\n";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(output, result.replaceAll("\r\n", "\n"));
+	}
 	
 	@Test
 	public void simplePipe() {
@@ -85,9 +73,16 @@ public class SprockellTest {
 	public void simpleArray() {
 		String result = compileAndRunFile("SimpleArray");
 		String output = "0123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
-		//String output = "3";
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals(output, result.replaceAll("\r\n", "\n"));
+	}
+	
+	@Test
+	public void simpleOverloading() {
+		String result = compileAndRunFile("SimpleOverloading");
+		String output = "3\n1\n25\n";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized(output, result);
 	}
 	
 	@Test
@@ -173,8 +168,6 @@ public class SprockellTest {
 	public static String compileAndRun(ANTLRInputStream input) {
 		Program prog = Sprockell.compile(input);
 		
-		System.out.println(prog.prettyString(0, true));
-		
 		if (prog == null) {
 			System.out.println("There were errors");
 			return null;
@@ -208,5 +201,9 @@ public class SprockellTest {
 			System.out.println("Stream was empty");
 			return null;
 		}
+	}
+	
+	public void assertSanitized(String expected, String actual) {
+		assertEquals(expected.replaceAll("\r\n", "\n"), actual.replaceAll("\r\n", "\n"));
 	}
 } 

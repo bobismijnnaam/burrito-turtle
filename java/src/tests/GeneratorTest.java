@@ -14,32 +14,32 @@ public class GeneratorTest {
 	@Test
 	public void scary() throws FileNotFoundException {
 		String prog = ""
-				+ "int add(int x, int y)\n"
-				+ "	<- x + y;\n"
-				+ ".\n"
-				+ "bool isEven(int x) <- x % 2 == 0;.\n"
-				+ "int program()\n"
-				+ "	int total = 0;\n"
-				+ "	int i = 0; i < 100 @\n"
-				+ "		isEven(i) ?\n"
-				+ "			i|\\;\n"
-				+ "			total = add(total, i);\n"
-				+ "		.\n"
-				+ "		i = add(i, 1);"
-				+ "	.\n"
-				+ " |\\;\n"
-				+ " total|\\;\n"
-				+ "10|\\;100|\\;1000|\\;"
-				+ "	<- 0;\n"
-				+ ".\n"
+				+ "int add(int x, int y) <- x + y; ."
+				+ "int program()"
+				+ "	false|;"
+				+ "	10|;"
+				+ "	false|;"
+				+ "	13|;"
+				+ "	false|;"
+				+ "	2+3|;"
+				+ "	false|;"
+				+ "	add(2, 3)|;"
+				+ "	false|;"
+				+ "	500|;"
+				+ "	false|;"
+				+ "	123456789|;"
+				+ "	false|;"
+				+ "	10|;"
+				+ "	<- 0;"
+				+ "."
 				;
-//		Program result = Sprockell.compile(prog);
-//		System.out.println(result.prettyString(0, true));
+		Program result = Sprockell.compile(prog);
+		System.out.println(result.prettyString(0, true));
 		String output = SprockellTest.compileAndRun(prog);
 		
 		assertNotNull(output);
 		System.out.println(output);
-		assertFalse(output.equals(""));
+//		assertFalse(output.equals(""));
 
 		System.out.println("Done!");
 	}

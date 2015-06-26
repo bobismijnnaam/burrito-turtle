@@ -1,0 +1,15 @@
+int fib(int n)
+	n == 0 ? <- 0; .
+	n == 1 ? <- 1; .
+	<- fib(n - 1) + fib(n - 2);
+.
+
+bool even(int n) <- n % 2 == 0; .
+
+int program()
+	int i = 0; i < 11 @
+		even(i) ? fib(i)|\; .
+		i = i + 1;
+	.
+	<- 0;
+.

@@ -6,16 +6,15 @@ import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
 
 import java.util.HashMap;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 
 import lang.BurritoBaseVisitor;
+import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
-import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.DecExprContext;
@@ -59,9 +58,7 @@ import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
-import comp.Type.Array;
 import sprockell.Instr;
 import sprockell.MemAddr;
 import sprockell.Operator;
@@ -69,6 +66,8 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+
+import comp.Type.Array;
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public final String MAINMETHOD = "program";
@@ -81,6 +80,14 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private String mainLabel;
 	private String endLabel;
 	
+	private String printBoolLabel;
+	private String printIntLabel;
+	
+	/**
+	 * Puts a new Program instance into prog, and pushes the old one on the stack.
+	 * At the end the visitor will stitch them all together.
+	 * @param funcName The function you're entering so we can save it in a map
+	 */
 	private void enterFunc(String funcName) {
 		progStack.push(prog);
 		prog = new Program();
@@ -108,19 +115,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			visit(asc);
 		}
 		
-		if (!progMap.containsKey(MAINMETHOD)) {
-			System.out.println(MAINMETHOD + " NOT FOUND, undefined behaviour from here on");
-			return null;
-		}
+		// TODO: There are better ways to check this, such as veryifying after the FunctionCollector phase. 
+		// Also, once imports get in here it shouldn't be a problem since a file does not explicitly need a main
+		// If it's imported it doesn't need one
 		
 		// Start making the final program here
 		// First construct the "fake" stack for program()
-		prog.emit(Push, zero); // Return value of program(); (it's an int)
-		prog.emit(Push, zero); // RegA
-		prog.emit(Push, zero); // RegB
-		prog.emit(Push, zero); // RegC
-		prog.emit(Push, zero); // RegD
-		prog.emit(Push, zero); // RegE
 		prog.emit(Const, new Value(endLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE)); // Return address
 		// No parameters, so nothing to push here. Maybe a TODO?
@@ -135,7 +135,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		prog.emit(endLabel, Nop);
-		prog.emit(Nop);
+		prog.emit(Nop); // Extra nops to flush stdio
 		prog.emit(Nop);
 		prog.emit(Nop);
 		prog.emit(Nop);
@@ -147,15 +147,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitFunc(FuncContext ctx) {
-		Function func = checkResult.getFunction(ctx);
-		
-		enterFunc(func.id);
+		Function.Overload func = checkResult.getFunction(ctx); 
 
-		if (func.id.equals(MAINMETHOD)) {
+		enterFunc(func.func.id + func.label);
+		
+		if (func.func.id.equals(MAINMETHOD) && func.args.length == 0) {
 			mainLabel = func.label;
-			if (func.args.length > 0) {
-				System.out.println("Warning, giving " + MAINMETHOD + " more than one argument causes undefined behaviour!");
-			}
 		}
 
 		prog.emit(func.label, Nop);
@@ -228,7 +225,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// TODO: Replace with storeAI (store reg => reg, offset)
 		
 		// Waarde mem[arp + offset]
-		// Changed the thing here to SUB TODO
 		prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
 		prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		return null;
@@ -513,7 +509,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitFuncExpr(FuncExprContext ctx) {
-		Function func = checkResult.getFunction(ctx.ID());
+		Function.Overload func = checkResult.getFunction(ctx.ID());
 		
 		Reg zero = new Reg(Zero);
 		String returnLabel = Program.mkLbl(ctx, "return");
@@ -573,22 +569,19 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	@Override
 	public List<Instr> visitReturnStat(ReturnStatContext ctx) {
 		if (ctx.expr() != null) {
-			visit(ctx.expr());
-			
-			// Now move the value from regE to the stack.
+			visit(ctx.expr()); 
 		}
 		
-		Function func = checkResult.getFunction(ctx.parent);
-		
+		Function.Overload func = checkResult.getFunction(ctx);
+
 		// Pop all current stack variables off the stack
 		int currStackSize = checkResult.getStackSize(ctx); 
 		
 		// Unwind the stack
-		// TODO: Optimize this to an instruction that just changes the stack pointer
-		// Bonus: this does null every stack entry :-)
-		for (int i = 0; i < currStackSize; i++) {
-			prog.emit(Pop, new Reg(Zero));
-		}
+		if (currStackSize > 0) {
+			prog.emit(Const, new Value(currStackSize), new Reg(RegD));
+			prog.emit(Compute, new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(SP));
+		} 
 		
 		// ARP is now at the integer AFTER the last parameter, so we 
 		// pop one more to let the SP point to the last parameter
@@ -596,14 +589,20 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Pop, new Reg(Zero));
 		
 		// Unpop all the parameters
+		int total = 0;
 		for (Type arg : func.args) {
 			for (int i = 0; i < arg.size(); i++) {
-				prog.emit(Pop, new Reg(Zero));
+				total += 1; 
 			}
 		}
+		if (total > 0) {
+			prog.emit(Const, new Value(total), new Reg(RegD));
+			prog.emit(Compute, new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(SP));
+		}
 		
-		// Store the return value in the return value field
-		if (ctx.expr() != null) {
+		// Store the return value in the return value field if it's not main
+		// TODO: Do something with return value in case of main
+		if (ctx.expr() != null && func.func.id != MAINMETHOD) {
 			prog.emit(Const, new Value(6), new Reg(RegD)); // To skip over the return address field and the 5 registers
 			prog.emit(Compute,  new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(RegD));
 			prog.emit(Store, new Reg(RegE), new MemAddr(RegD));
@@ -616,6 +615,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	/**
+	 * TODO: Make sure it's called like a function instead of just pasted in the source
+	 * Do this for both bool and integer. Test it as well! And wonder at the marvelous efficiency!
+	 */
 	@Override
 	public List<Instr> visitOutStat(OutStatContext ctx) {
 		if (ctx.expr() != null) {
@@ -623,117 +626,149 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 			// Different routine depending on type
 			if (checkResult.getType(ctx.expr()).equals(new Type.Bool())) {
-				Reg workReg = new Reg(RegD);
-				String equals = Program.mkLbl(ctx, "equals");
-				String end = Program.mkLbl(ctx, "end");
-				
-				prog.emit(Compute,  new Operator(Equal), new Reg(Zero), new Reg(RegE), workReg);
-				prog.emit(Branch, workReg, new Target(equals));
-				
-				for (char c : "true".toCharArray()) {
-					prog.emit(Const, new Value(c), workReg);
-					prog.emit(Write, workReg, new MemAddr("stdio"));
+				if (printBoolLabel == null) {
+					printBoolLabel = "pipeOp_bool";
+					
+					enterFunc(printBoolLabel);
+					
+					Reg workReg = new Reg(RegD);
+					String equals = Program.mkLbl(ctx, "equals");
+					String end = Program.mkLbl(ctx, "end");
+					
+					prog.emit(printBoolLabel, Compute,  new Operator(Equal), new Reg(Zero), new Reg(RegE), workReg);
+					prog.emit(Branch, workReg, new Target(equals));
+					
+					for (char c : "true".toCharArray()) {
+						prog.emit(Const, new Value(c), workReg);
+						prog.emit(Write, workReg, new MemAddr("stdio"));
+					}
+					prog.emit(Jump, new Target(end));
+					
+					prog.emit(equals, Nop);
+					
+					for (char c : "false".toCharArray()) {
+						prog.emit(Const, new Value(c), workReg);
+						prog.emit(Write, workReg, new MemAddr("stdio"));
+					}
+					
+					prog.emit(end, Pop, new Reg(RegE));
+					prog.emit(Jump, new Target(RegE));
+					
+					leaveFunc();
 				}
-				prog.emit(Jump, new Target(end));
 				
-				prog.emit(equals, Nop);
-				
-				for (char c : "false".toCharArray()) {
-					prog.emit(Const, new Value(c), workReg);
-					prog.emit(Write, workReg, new MemAddr("stdio"));
-				}
-				
-				prog.emit(end, Nop);
+				String returnLabel = Program.mkLbl(ctx, "boolreturn");
+
+				prog.emit(Const, new Value(returnLabel), new Reg(RegD));
+				prog.emit(Push, new Reg(RegD));
+				prog.emit(Jump, new Target(printBoolLabel));
+				prog.emit(returnLabel, Nop);
 			} else if (checkResult.getType(ctx.expr()).equals(new Type.Int())) {
-				Operator mod = new Operator(Mod);
-				Operator div = new Operator(Div);
-				Operator mul = new Operator(Mul);
-				Operator add = new Operator(Add);
+				if (printIntLabel == null) {
+					printIntLabel = "pipeOp_int";
+					
+					enterFunc(printIntLabel);
+					
+					Operator mod = new Operator(Mod);
+					Operator div = new Operator(Div);
+					Operator mul = new Operator(Mul);
+					Operator add = new Operator(Add);
+					
+					Reg numReg = new Reg(RegE);
+					Reg countReg = new Reg(RegB);
+					Reg orderReg = new Reg(RegD);
+					Reg workReg = new Reg(RegC);
+					
+					String begin = Program.mkLbl(ctx, "begin");
+					String unroll = Program.mkLbl(ctx, "unroll");
+					String beginUnroll = Program.mkLbl(ctx, "beginUnroll");
+					String done = Program.mkLbl(ctx, "done"); 
+					String again = Program.mkLbl(ctx, "again"); 
+					
+					// Starting values
+					prog.emit(printIntLabel, Const, new Value(10), orderReg);
+					prog.emit(Const, new Value(0), countReg);
+					
+					// TODO: When ComputeI is actually used, replace stack usage here
+					
+					// Print minus if it's negative
+					prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
+					prog.emit(Branch, workReg, new Target(begin));
+					prog.emit(Const, new Value("-".charAt(0)), workReg);
+					prog.emit(Write, workReg, new MemAddr("stdio"));
+					prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
+					
+					// Take modulo of current value and save it on the stack
+					prog.emit(begin, Compute, mod, numReg, orderReg, workReg);
+					prog.emit(Push, workReg);
+					
+					// Divide current modulo by 10 to extract the current digit
+					// 12345 mod 10 => 5, 10 / 10 => 1, 5 div 1 = 5 (the digit)
+					// 12345 mod 100 => 45, 100 / 10 => 10, 45 div 10 => 4 (the digit)
+					prog.emit(Const, new Value(10), workReg);
+					prog.emit(Compute, div, orderReg, workReg, orderReg);
+					
+					// Retrieve the modulo'd current number
+					prog.emit(Pop, workReg);
+					
+					// Retrieve the current digit and save it on the stack for printing
+					prog.emit(Compute, div, workReg, orderReg, workReg);
+					prog.emit(Push, workReg);
+					
+					// Restore the modulo and increment the digit count 
+					prog.emit(Const, new Value(10), workReg);
+					prog.emit(Compute, mul, workReg, orderReg, orderReg);
+					prog.emit(Const, new Value(1), workReg);
+					prog.emit(Compute, add, workReg, countReg, countReg);
+					
+					// If current order is more than the number (or order == number, i.e. order
+					// == 10 and number == 10), we're finished
+					// Otherwise multiply the current order by 10 to go to the next digit
+					// And then jump to the beginning
+					prog.emit(Compute, new Operator(Equal), orderReg, numReg, workReg);
+					prog.emit(Branch, workReg, new Target(again));
+					prog.emit(Compute, new Operator(GtE), orderReg, numReg, workReg);
+					prog.emit(Branch, workReg, new Target(unroll));
+					prog.emit(again, Const, new Value(10), workReg);
+					prog.emit(Compute, mul, workReg, orderReg, orderReg);
+					prog.emit(Jump, new Target(begin));
+					
+					// Initialize registers for printing
+					Reg asciiReg = orderReg;
+					Reg oneReg = numReg;
+					prog.emit(unroll, Const, new Value(48), asciiReg);
+					prog.emit(Const, new Value(1), oneReg);
+					
+					// Get a digit
+					prog.emit(beginUnroll, Pop, workReg);
+					
+					// Convert it to ascii and decrement the digit count
+					prog.emit(Compute, new Operator(Sub), countReg, oneReg, countReg);
+					prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
+					
+					// Output it
+					prog.emit(Write, workReg, new MemAddr("stdio"));
+					
+					// If all digits have been written to stdio, we're done
+					prog.emit(Compute, new Operator(Equal), new Reg(Zero), countReg, workReg);
+					prog.emit(Branch, workReg, new Target(done));
+					
+					// Otherwise, print another digit
+					prog.emit(Jump, new Target(beginUnroll));
+					
+					// Emit done label here
+					prog.emit(done, Pop, new Reg(RegE));
+					prog.emit(Jump, new Target(RegE));
+					
+					leaveFunc();
+				}
 				
-				Reg numReg = new Reg(RegE);
-				Reg countReg = new Reg(RegB);
-				Reg orderReg = new Reg(RegD);
-				Reg workReg = new Reg(RegC);
-				
-				String begin = Program.mkLbl(ctx, "begin");
-				String unroll = Program.mkLbl(ctx, "unroll");
-				String beginUnroll = Program.mkLbl(ctx, "beginUnroll");
-				String done = Program.mkLbl(ctx, "done"); 
-				String again = Program.mkLbl(ctx, "again"); 
-				
-				// Starting values
-				prog.emit(Const, new Value(10), orderReg);
-				prog.emit(Const, new Value(0), countReg);
-				
-				// TODO: When ComputeI is actually used, replace stack usage here
-				
-				// Print minus if it's negative
-				prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
-				prog.emit(Branch, workReg, new Target(begin));
-				prog.emit(Const, new Value("-".charAt(0)), workReg);
-				prog.emit(Write, workReg, new MemAddr("stdio"));
-				prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
-				
-				// Take modulo of current value and save it on the stack
-				prog.emit(begin, Compute, mod, numReg, orderReg, workReg);
-				prog.emit(Push, workReg);
-				
-				// Divide current modulo by 10 to extract the current digit
-				// 12345 mod 10 => 5, 10 / 10 => 1, 5 div 1 = 5 (the digit)
-				// 12345 mod 100 => 45, 100 / 10 => 10, 45 div 10 => 4 (the digit)
-				prog.emit(Const, new Value(10), workReg);
-				prog.emit(Compute, div, orderReg, workReg, orderReg);
-				
-				// Retrieve the modulo'd current number
-				prog.emit(Pop, workReg);
-				
-				// Retrieve the current digit and save it on the stack for printing
-				prog.emit(Compute, div, workReg, orderReg, workReg);
-				prog.emit(Push, workReg);
-				
-				// Restore the modulo and increment the digit count 
-				prog.emit(Const, new Value(10), workReg);
-				prog.emit(Compute, mul, workReg, orderReg, orderReg);
-				prog.emit(Const, new Value(1), workReg);
-				prog.emit(Compute, add, workReg, countReg, countReg);
-				
-				// If current order is more than the number (or order == number, i.e. order
-				// == 10 and number == 10), we're finished
-				// Otherwise multiply the current order by 10 to go to the next digit
-				// And then jump to the beginning
-				prog.emit(Compute, new Operator(Equal), orderReg, numReg, workReg);
-				prog.emit(Branch, workReg, new Target(again));
-				prog.emit(Compute, new Operator(GtE), orderReg, numReg, workReg);
-				prog.emit(Branch, workReg, new Target(unroll));
-				prog.emit(again, Const, new Value(10), workReg);
-				prog.emit(Compute, mul, workReg, orderReg, orderReg);
-				prog.emit(Jump, new Target(begin));
-				
-				// Initialize registers for printing
-				Reg asciiReg = orderReg;
-				Reg oneReg = numReg;
-				prog.emit(unroll, Const, new Value(48), asciiReg);
-				prog.emit(Const, new Value(1), oneReg);
-				
-				// Get a digit
-				prog.emit(beginUnroll, Pop, workReg);
-				
-				// Convert it to ascii and decrement the digit count
-				prog.emit(Compute, new Operator(Sub), countReg, oneReg, countReg);
-				prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
-				
-				// Output it
-				prog.emit(Write, workReg, new MemAddr("stdio"));
-				
-				// If all digits have been written to stdio, we're done
-				prog.emit(Compute, new Operator(Equal), new Reg(Zero), countReg, workReg);
-				prog.emit(Branch, workReg, new Target(done));
-				
-				// Otherwise, print another digit
-				prog.emit(Jump, new Target(beginUnroll));
-				
-				// Emit done label here
-				prog.emit(done, Nop);
+				String returnLabel = Program.mkLbl(ctx, "intreturn");
+
+				prog.emit(Const, new Value(returnLabel), new Reg(RegD));
+				prog.emit(Push, new Reg(RegD));
+				prog.emit(Jump, new Target(printIntLabel));
+				prog.emit(returnLabel, Nop);
 			} else {
 				System.out.println("Unsupported type given to stdout " + ctx.getText());
 				return null;
@@ -741,13 +776,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		Reg workReg = new Reg(RegE);
-		String nl = "\n"; // System.lineSeparator(); // Sprockell seems to handle \n just fine
-
+		// Haskell seems to have no trouble with the \r\n/\n business.
+		if (ctx.newlines().getChildCount() > 0) prog.emit(Const, new Value((int) "\n".toCharArray()[0]), workReg);
 		for (int i = 0; i < ctx.newlines().getChildCount(); i++) {
-			for (char c : nl.toCharArray()) {
-				prog.emit(Const, new Value(c), workReg);
-				prog.emit(Write, workReg, new MemAddr("stdio"));
-			}
+			prog.emit(Write, workReg, new MemAddr("stdio"));
 		}
 		
 		return null;
