@@ -868,14 +868,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 				// print a single char
 				if (printCharLabel == null) {
 					printCharLabel = "pipeOp_char";
-					String end = Program.mkLbl(ctx, "end");
 					
 					enterFunc(printCharLabel);
 					// Output it
 					prog.emit(printCharLabel, Write, new Reg(RegE), new MemAddr("stdio"));
-					prog.emit(Jump, new Target(end));
 					
-					prog.emit(end, Pop, new Reg(RegE));
+					prog.emit(Pop, new Reg(RegE));
 					prog.emit(Jump, new Target(RegE));
 					
 					leaveFunc();

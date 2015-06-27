@@ -23,8 +23,8 @@ public class SprockellTest {
 	
 	@Test
 	public void simpleGlobals() {
-		String result = compileAndRunFile("SimpleGlobals", 20);
-		System.out.println(result);
+		// TODO: Use locks in this test
+		String result = compileAndRunFile("SimpleGlobals", 5);
 	}
 
 	@Test

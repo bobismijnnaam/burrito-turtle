@@ -1,18 +1,22 @@
 package sprockell;
 
 import static sprockell.Operand.Type.*;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+
 import lang.BurritoLexer;
 import lang.BurritoParser;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import sprockell.Operand.Type;
-
 import comp.Checker;
 import comp.ErrorListener;
 import comp.FunctionCollector;
@@ -64,9 +68,23 @@ public class Sprockell {
 		}
 	}
 	
+	public static Program scaryCompileFile(String base_dir, String file) {
+		try {
+			return scaryCompile(new ANTLRInputStream(new FileReader(new File(base_dir, file))));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
 	public static Program scaryCompile(String progStr) {
-		CharStream input = new ANTLRInputStream(progStr);
-		
+		return scaryCompile(new ANTLRInputStream(progStr));
+	}
+	
+	public static Program scaryCompile(ANTLRInputStream input) {
 		ErrorListener listener = new ErrorListener();
 
 		Lexer lexer = new BurritoLexer(input);
@@ -79,11 +97,13 @@ public class Sprockell {
 		parser.removeErrorListeners();
 		parser.addErrorListener(listener);
 		
+		FunctionCollector funCol = new FunctionCollector();
 		Checker checker = new Checker();
 		Generator generator = new Generator();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = funCol.generate(result);
+			Result checkResult = checker.check(result, scope);
 			Program prog = generator.generate(result, checkResult);
 
 			return prog;

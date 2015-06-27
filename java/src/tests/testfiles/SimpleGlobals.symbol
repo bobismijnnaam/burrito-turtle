@@ -1,7 +1,8 @@
 int gA = 0;
 
+>> TODO: Use locks here
 int program()
-	int i = 0; i < 100 @
+	int i = 0; i < 5 @
 		gA+;
 		gA+;
 		gA+;
@@ -12,4 +13,6 @@ int program()
 		gA-;
 	i++; .
 	gA|\;
+	'd'|\;
+	<- 0;
 .
