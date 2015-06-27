@@ -7,6 +7,7 @@ import lang.BurritoBaseVisitor;
 import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.BoolTypeContext;
+import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.FuncContext;
 import lang.BurritoParser.IntTypeContext;
 import lang.BurritoParser.ProgramContext;
@@ -21,7 +22,11 @@ import sprockell.Program;
 
 import comp.Type.Array;
 
-public class FunctionCollector extends BurritoBaseVisitor<Integer> {
+/**
+ * Does an initial scan of the tree to collect functions and global variable declarations
+ * Initialization order of global variables is equal to the order of declaration in the tree
+ */
+public class Collector extends BurritoBaseVisitor<Integer> {
 	// TODO: Return statement checking (can probably be done with that flow thingy)
 	// Or maybe another visitor, or maybe this one. Each branch should just eventually reach a return statement
 	// That actually sounds completely doable.
@@ -37,8 +42,11 @@ public class FunctionCollector extends BurritoBaseVisitor<Integer> {
 	private ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	private List<String> errors = new ArrayList<>();
 	
+	private int treeCode;
+	
 	public Scope generate(ParseTree tree) {
 		this.scope = new Scope();
+		treeCode = tree.hashCode();
 		tree.accept(this);
 		return scope;
 	}
@@ -55,6 +63,22 @@ public class FunctionCollector extends BurritoBaseVisitor<Integer> {
 			visit(ftx);
 		}
 		
+		for (DeclContext dtx : ctx.decl()) {
+			visit(dtx);
+		}
+		
+		return 0;
+	}
+	
+	@Override
+	public Integer visitDecl(DeclContext ctx) {
+		visit(ctx.type());
+		
+		String id = ctx.ID().getText();
+		Type type = getType(ctx.type());
+		
+        scope.putGlobal(id, type);
+
 		return 0;
 	}
 	
@@ -73,7 +97,7 @@ public class FunctionCollector extends BurritoBaseVisitor<Integer> {
 		}
 		
 		String funcName = ctx.ID().getText();
-		String funcLabel = Program.mkLbl(ctx, "function_" + funcName);
+		String funcLabel = Program.mkLbl(ctx, "function_" + funcName + "_" + treeCode);
 		Type returnType = getType(ctx.type());
 		Type[] argTypes = new Type[ctx.arg().size()];
 		for (int i = 0; i < ctx.arg().size(); i++) {
@@ -132,6 +156,40 @@ public class FunctionCollector extends BurritoBaseVisitor<Integer> {
 
 	private Type getType(ParseTree node) {
 		return types.get(node);
+	}
+
+	/**
+	 * Utility functions below here
+	 */
+	// TODO: Maybe move all this functionality into a SymbolVisitor class?
+	// So we can have uniform error reporting in anything that visits/traverses a tree.
+	
+	/** Indicates if any errors were encountered in this tree listener. */
+	public boolean hasErrors() {
+		return !getErrors().isEmpty();
+	}
+
+	/** Returns the list of errors collected in this tree listener. */
+	public List<String> getErrors() {
+		return this.errors;
+	}
+	
+	/** Checks the inferred type of a given parse tree,
+	 * and adds an error if it does not correspond to the expected type.
+	 */
+	private boolean checkType(ParserRuleContext node, Type expected) {
+		Type actual = getType(node);
+		if (actual == null) {
+			addError(node, "Missing inferred type of " + node.getText());
+			return false;
+		}
+		if (!actual.equals(expected)) {
+			addError(node, "Expected type '%s' but found '%s'", expected,
+					actual);
+			return false;
+		}
+		
+		return true;
 	}
 
 	/** Records an error at a given parse tree node.

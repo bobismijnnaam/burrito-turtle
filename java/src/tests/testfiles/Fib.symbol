@@ -1,15 +1,20 @@
 int fib(int n)
-	n == 0 ? <- 0; .
-	n == 1 ? <- 1; .
-	<- fib(n - 1) + fib(n - 2);
+	n == zero ? <- zero; .
+	n == one ? <- one; .
+	<- fib(n - one) + fib(n - two);
 .
 
-bool even(int n) <- n % 2 == 0; .
+bool even(int n) <- n % two == 0; .
 
 int program()
-	int i = 0; i < 11 @
+	int i = 0; i < max @
 		even(i) ? fib(i)|\; .
-		i = i + 1;
+		i+;
 	.
 	<- 0;
 .
+
+int zero = 0;
+int one = 1;
+int two = 2;
+int max = 11;

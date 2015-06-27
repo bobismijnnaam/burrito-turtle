@@ -95,16 +95,17 @@ public class Scope {
 		return result;
 	}
 	
-	public boolean put(String id, Type type, int size) {
-		boolean result = !this.types.containsKey(id);
-		if (result) {
-			this.types.put(id, type);
-			this.offsets.put(id, this.size);
-			this.size += size;
-			this.reaches.put(id, Local);
-		}
-		return result;
-	}
+	// TODO: Deprecated!
+//	public boolean put(String id, Type type, int size) {
+//		boolean result = !this.types.containsKey(id);
+//		if (result) {
+//			this.types.put(id, type);
+//			this.offsets.put(id, this.size);
+//			this.size += size;
+//			this.reaches.put(id, Local);
+//		}
+//		return result;
+//	}
 	
 	public String putFunc(String id, String label, Type returnType, Type... args) {
 		if (!functions.containsKey(id)) functions.put(id, new Function(id, returnType));

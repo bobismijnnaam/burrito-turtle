@@ -91,13 +91,19 @@ public class Checker extends BurritoBaseListener {
 	
 	// GLOBALS -----------------------
 	
-	// TODO: Put this in a separate visitor, just like FunctionCollector
+	/**
+	 * The variable is already in the scope, but the expression wasn't checked.
+	 * That's what happens here.
+	 */
 	@Override
 	public void exitDecl(DeclContext ctx) {
-		checkType(ctx.type(), getType(ctx.expr()));
-		
 		String id = ctx.ID().getText();
-		scope.putGlobal(id, getType(ctx.type()));
+		Type type = result.getType(ctx.type());
+		
+		setType(ctx.ID(), type);		
+		checkType(ctx.expr(), type);
+		setOffset(ctx.ID(), scope.offset(id));
+		setReach(ctx.ID(), scope.reach(id));
 	}
 	
 	// FUNCTIONS ---------------------
@@ -456,11 +462,11 @@ public class Checker extends BurritoBaseListener {
 		
 		// TODO: Is this correct? Just want to make sure - Bob
 //		if (ctx.getChildCount() > 0) {
-		if (type instanceof Type.Array) {
-			scope.put(id, type, type.size());
-		} else {
+//		if (type instanceof Type.Array) {
 			scope.put(id, type);
-		}
+//		} else {
+//			scope.put(id, type);
+//		}
 		
 		setType(ctx.ID(), type);		
 		setOffset(ctx.ID(), scope.offset(id));

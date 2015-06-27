@@ -19,7 +19,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import sprockell.Operand.Type;
 import comp.Checker;
 import comp.ErrorListener;
-import comp.FunctionCollector;
+import comp.Collector;
 import comp.Generator;
 import comp.ParseException;
 import comp.Result;
@@ -97,7 +97,7 @@ public class Sprockell {
 		parser.removeErrorListeners();
 		parser.addErrorListener(listener);
 		
-		FunctionCollector funCol = new FunctionCollector();
+		Collector funCol = new Collector();
 		Checker checker = new Checker();
 		Generator generator = new Generator();
 
@@ -131,7 +131,7 @@ public class Sprockell {
 		parser.removeErrorListeners();
 		parser.addErrorListener(listener);
 		
-		FunctionCollector funCol = new FunctionCollector();
+		Collector funCol = new Collector();
 		Checker checker = new Checker();
 		Generator generator = new Generator();
 

@@ -1,7 +1,6 @@
 package comp;
 
 import static sprockell.Operator.Which.*;
-
 import static sprockell.Program.*;
 import static sprockell.Reg.Which.*;
 import static sprockell.Sprockell.Op.*;
@@ -20,6 +19,7 @@ import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.CharacterExprContext;
 import lang.BurritoParser.DecExprContext;
+import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
@@ -69,7 +69,6 @@ import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
 import comp.Type.Array;
-
 import static comp.Reach.*;
 
 
@@ -120,6 +119,11 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		for (FuncContext asc : ctx.func()) {
 			visit(asc);
 		}
+
+		// TODO: When threading is enabled make only Sprockell 0 initialize the shared memory
+		for (DeclContext dtx : ctx.decl()) {
+			visit(dtx);
+		}
 		
 		// Start making the final program here
 		// First construct the "fake" stack for program()
@@ -143,6 +147,24 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Nop);
 		prog.emit(Nop);
 		prog.emit(EndProg);
+		
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitDecl(DeclContext ctx) {
+		if (checkResult.getReach(ctx.ID()) != Global) {
+			System.out.println("[Generator] Global variable reach should be ");
+			return null;
+		}
+		
+		visit(ctx.expr());
+		// Value is now in E
+		
+		// Get offset
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
+		// Write E to offset
+		prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
 		
 		return null;
 	}
@@ -870,6 +892,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					printCharLabel = "pipeOp_char";
 					
 					enterFunc(printCharLabel);
+
 					// Output it
 					prog.emit(printCharLabel, Write, new Reg(RegE), new MemAddr("stdio"));
 					
