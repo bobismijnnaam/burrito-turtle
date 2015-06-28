@@ -25,14 +25,16 @@ public class SprockellTest {
 	public void simpleGlobals() {
 		// TODO: Use locks in this test
 		String result = compileAndRunFile("SimpleGlobals", 5);
+		assertNotNull("Compiling or executing went wrong", result);
+		assertNotEquals("", result);
 	}
 
 	@Test
-	public void fib() {
+	public void simpleFib() {
 		String result = compileAndRunFile("Fib");
 		String output = "0\n1\n3\n8\n21\n55\n";
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(output, result.replaceAll("\r\n", "\n"));
+		assertSanitized(output, result);
 	}
 	
 	@Test
@@ -72,7 +74,7 @@ public class SprockellTest {
 		String output = "44\n5\n\n5\n\n\n0";
 		String result = compileAndRunFile("SimpleOutBackSlash");
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(output, result.replaceAll("\r\n", "\n"));
+		assertSanitized(output, result);
 	}
 	
 	@Test
@@ -80,7 +82,7 @@ public class SprockellTest {
 		String result = compileAndRunFile("SimpleArray");
 		String output = "0123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(output, result.replaceAll("\r\n", "\n"));
+		assertEquals(output, result);
 	}
 	
 	@Test
@@ -108,35 +110,36 @@ public class SprockellTest {
 			}
 		}
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(output, result.replaceAll("\r\n", "\n"));
+		assertEquals(output, result);
 	}
 	
 	@Test
 	public void comments() {
 		String result = compileAndRunFile("Comments");
 		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals("225", result);
 	}
 	
 	@Test
 	public void simpleIncExpr() {
 		String result = compileAndRunFile("SimpleIncExpr");
-		int z = 0;
-		for (int i = 0; i < 11; i++) {
-			z++;
-		}
+//		int z = 0;
+//		for (int i = 0; i < 11; i++) {
+//			z++;
+//		}
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(z, 11);
+		assertEquals("11", result);
 	}
 	
 	@Test
 	public void simpleDecExpr() {
 		String result = compileAndRunFile("SimpleDecExpr");
-		int z = 30;
-		for (int i = 0; i < 11; i++) {
-			z--;
-		}
+//		int z = 30;
+//		for (int i = 0; i < 11; i++) {
+//			z--;
+//		}
 		assertNotNull("Compiling or executing went wrong", result);
-		assertEquals(z, 19);
+		assertEquals("19", result);
 	}
 	
 	@Test
@@ -152,18 +155,21 @@ public class SprockellTest {
 		output += i;
 		i -= 4;
 		output += i;
-		assertEquals(result, output);
 		assertNotNull("Compiling or executing went wrong", result);
+		assertEquals(result, output);
 	}
 
 	@Test
 	public void simpleChar() {
 		String result = compileAndRunFile("SimpleChar");
-		String output = "Hello world";
-		System.out.println(result);
-		//assertEquals(result, output);
+		String output = "Hello world\n\n";
 		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized(output, result);
 	}
+	
+	/**
+	 * Utility functions
+	 */
 	
 	public static String compileAndRun(String progStr, int cores) {
 		return compileAndRun(new ANTLRInputStream(progStr), cores);
@@ -194,6 +200,9 @@ public class SprockellTest {
 	
 	public static String compileAndRun(ANTLRInputStream input, int cores) {
 		Program prog = Sprockell.compile(input);
+//		System.out.println("LOC: " + prog.getLineCount());
+		
+		int file = input.hashCode();
 		
 		if (prog == null) {
 			System.out.println("There were errors");
@@ -201,10 +210,10 @@ public class SprockellTest {
 		}
 	
 		try {
-			prog.writeToFile("test.hs", cores);
+			prog.writeToFile(file + ".hs", cores);
 			
 			Runtime rt = Runtime.getRuntime();
-			Process buildPr = rt.exec("ghc -i../sprockell/src -e main test.hs");
+			Process buildPr = rt.exec("ghc -i../sprockell/src -e main " + file + ".hs");
 			buildPr.waitFor();
 
 			InputStream is = buildPr.getInputStream();
@@ -230,7 +239,7 @@ public class SprockellTest {
 		}	
 	}
 	
-	public void assertSanitized(String expected, String actual) {
+	public static void assertSanitized(String expected, String actual) {
 		assertEquals(expected.replaceAll("\r\n", "\n"), actual.replaceAll("\r\n", "\n"));
 	}
 } 

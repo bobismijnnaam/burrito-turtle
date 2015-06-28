@@ -11,7 +11,8 @@ int program()
 		gA-;
 		gA-;
 		gA-;
-	i++; .
+		i++;
+	.
 	gA|\;
 	<- 0;
 .

@@ -139,14 +139,29 @@ public class Program {
 	public void writeToFile(String fileName, int cores) throws FileNotFoundException {
 		PrintWriter writer = new PrintWriter(fileName);
 		
-		writer.println("import Sprockell.System\n");
-		writer.println("prog = [");
+//		writer.println("import Sprockell.System\n");
+//		writer.println("prog = [");
+//		
+//		writer.println(prettyString(2, false) + "\n\t\t]");
+//		
+//		writer.println("main = run " + cores + " prog");
 		
-		writer.println(prettyString(2, false) + "\n\t\t]");
-		
-		writer.println("main = run " + cores + " prog");
+		writer.println(toHaskell(cores));
 		
 		writer.close();
+	}
+	
+	public String toHaskell(int cores) {
+		String r = "";
+
+		r += "import Sprockell.System\n";
+		r += "prog = [\n";
+		
+		r += prettyString(2, false) + "\n\t\t]\n";
+		
+		r += "main = run " + cores + " prog";
+		
+		return r;
 	}
 	
 	/**
@@ -197,5 +212,9 @@ public class Program {
 	
 	public void popInstruction() {
 		instr.remove(instr.size() - 1);
+	}
+
+	public int getLineCount() {
+		return instr.size();
 	}
 }

@@ -1,38 +1,78 @@
 package tests;
 
-import static org.junit.Assert.*;
-
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 import org.junit.Test;
 
 import sprockell.Program;
 import sprockell.Sprockell;
-import sprockell.Sprockell.Op;
 
 public class GeneratorTest {
+	String program = "int a = 13; int b = 4; int program() int c = a + b + 5; c|\\; <- c; .";
+	
 	@Test
-	public void scary() throws FileNotFoundException {
-		String prog = ""
-//				+ "int[2] doubler(int x) int[2] res; res[0] = x; res[1] = x; <- res; ."
-				+ "int program()"
-				+ "	int[3][3][3][3] x;"
-				+ "	x[0][0][0][0];"
-//				+ "	int[2] scary;"
-//				+ "	scary = doubler(12345);"
-//				+ "	scary[0]|\\;"
-//				+ "	scary[1]|\\;"
-				+ "	<- 0;"
-				+ "."
-				;
-		Program result = Sprockell.compile(prog);
-		System.out.println(result.prettyString(0, true));
-		String output = SprockellTest.compileAndRun(prog);
+	public void slow() throws FileNotFoundException {
+		int cores = 1;
 		
-		assertNotNull(output);
-		System.out.println(output);
-//		assertFalse(output.equals(""));
+		Program prog = Sprockell.compile(program);
+		
+		try {
+			prog.writeToFile("test.hs", cores);
+			
+			Runtime rt = Runtime.getRuntime();
+			Process buildPr = rt.exec("ghc -i../sprockell/src -e main test.hs");
+			buildPr.waitFor();
 
-		System.out.println("Done!");
+			InputStream is = buildPr.getInputStream();
+			
+			Scanner s = new Scanner(is).useDelimiter("\\A");
+			System.out.println("Slow:");
+			System.out.println(s.hasNext() ? s.next() : "");
+
+		    return;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			System.out.println("File not found");
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("IO Exception");
+			return;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			System.out.println("We got interrupted");
+			return;
+		} catch (NoSuchElementException e) {
+			e.printStackTrace();
+			System.out.println("Stream was empty");
+			return;
+		}	
+	}
+	
+	@Test
+	public void fast() throws IOException, InterruptedException {
+		int cores = 1;
+		
+		Program prog = Sprockell.compile(program);
+		
+		Runtime rt = Runtime.getRuntime();
+//		Process buildPr = rt.exec("ghci");
+		Process buildPr = rt.exec("ghc -i../sprockell/src -e \"" + prog.toHaskell(2) + "\"");
+
+		InputStream is = buildPr.getInputStream();
+		OutputStream os = buildPr.getOutputStream();
+		
+		os.write("map (+1) [1..5]\n:q\n".getBytes("US-ASCII"));
+		buildPr.waitFor();
+		
+		Scanner s = new Scanner(is).useDelimiter("\\A");
+		System.out.println("Fast:");
+		System.out.println(s.hasNext() ? s.next() : "");
 	}
 }

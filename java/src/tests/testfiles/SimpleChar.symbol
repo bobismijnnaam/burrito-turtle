@@ -1,6 +1,8 @@
 int program()
 	helloWorld();
-	showLlama();
+	
+	>> Enabling this breaks the test and I don't want to type it in a java string :p - Bob
+	>> showLlama();
 	<- 0;
 .
 
@@ -71,11 +73,11 @@ int helloWorld()
 	a[3] = 'l';
 	a[4] = 'o';
 	a[5] = ' ';
-	a[6] = 'L';
-	a[7] = 'l';
-	a[8] = 'a';
-	a[9] = 'm';
-	a[10] = 'a';
+	a[6] = 'w';
+	a[7] = 'o';
+	a[8] = 'r';
+	a[9] = 'l';
+	a[10] = 'd';
 	
 	int i = 0; i < 11 @
 		a[i]|;

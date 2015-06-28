@@ -10,6 +10,6 @@ int program()
 	>> They can be combined as well
 	int d {See?} = 5; 
 	>> noo worries!
-	
+	a*b*c*d|;
 	<- 0;
 .
