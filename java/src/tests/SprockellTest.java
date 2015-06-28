@@ -202,7 +202,8 @@ public class SprockellTest {
 		Program prog = Sprockell.compile(input);
 //		System.out.println("LOC: " + prog.getLineCount());
 		
-		int file = input.hashCode();
+//		int file = input.hashCode();
+		int file = 5;
 		
 		if (prog == null) {
 			System.out.println("There were errors");
