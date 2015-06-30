@@ -10,6 +10,7 @@ import lang.BurritoParser.BoolTypeContext;
 import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.FuncContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LockTypeContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.SigContext;
 
@@ -19,7 +20,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
 import sprockell.Program;
-
 import comp.Type.Array;
 
 /**
@@ -130,6 +130,12 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	@Override
 	public Integer visitIntType(IntTypeContext ctx) {
 		setType(ctx, new Type.Int());
+		return 0;
+	}
+	
+	@Override
+	public Integer visitLockType(LockTypeContext ctx) {
+		setType(ctx, new Type.Lock());
 		return 0;
 	}
 	

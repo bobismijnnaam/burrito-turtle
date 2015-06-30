@@ -58,6 +58,17 @@ abstract public class Type {
 		}
 	}
 	
+	static public class Lock extends Type {
+		@Override
+		public int size() {
+			return INT_SIZE * 2;
+		}
+		
+		public String toString() {
+			return "lock";
+		}
+	}
+	
 	static public class Array extends Type {
 		public Type elemType;
 		private int size;

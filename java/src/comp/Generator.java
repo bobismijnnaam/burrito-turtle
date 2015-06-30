@@ -1,5 +1,6 @@
 package comp;
 
+import static comp.Reach.*;
 import static sprockell.Operator.Which.*;
 import static sprockell.Program.*;
 import static sprockell.Reg.Which.*;
@@ -33,6 +34,7 @@ import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IncExprContext;
+import lang.BurritoParser.LockStatContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinAssStatContext;
@@ -55,6 +57,7 @@ import lang.BurritoParser.StatContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
+import lang.BurritoParser.UnlockStatContext;
 import lang.BurritoParser.WhileStatContext;
 import lang.BurritoParser.XorExprContext;
 
@@ -69,8 +72,10 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+
 import comp.Type.Array;
-import static comp.Reach.*;
+
+import static sprockell.Operator.Which.*;
 
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
@@ -159,17 +164,19 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	@Override
 	public List<Instr> visitDecl(DeclContext ctx) {
 		if (checkResult.getReach(ctx.ID()) != Global) {
-			System.out.println("[Generator] Global variable reach should be ");
+			System.out.println("[Generator] Global variable reach should be");
 			return null;
 		}
 		
-		visit(ctx.expr());
-		// Value is now in E
-		
-		// Get offset
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
-		// Write E to offset
-		prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+		if (ctx.expr() != null) {
+			visit(ctx.expr());
+			// Value is now in E
+			
+			// Get offset
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
+			// Write E to offset
+			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+		}
 		
 		return null;
 	}
@@ -382,6 +389,48 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		for (StatContext asc : ctx.stat()) {
 			visit(asc);
 		}
+		
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitLockStat(LockStatContext ctx) {
+		String loopLabel = Program.mkLbl(ctx, "looplabel");
+		
+		Reg offsetReg = new Reg(RegE);
+		Reg testReg = new Reg(RegD);
+		Reg zero = new Reg(Zero);
+		
+		prog.emit(Const, new Value(checkResult.getOffset(ctx)), offsetReg);
+		prog.emit(loopLabel, TestAndSet, new MemAddr(RegE));
+		prog.emit(Receive, testReg);
+		prog.emit(Compute, new Operator(Equal), testReg, zero, testReg);
+		prog.emit(Branch, testReg, new Target(loopLabel));
+		prog.emit(Const, new Value(checkResult.getOffset(ctx) + 1), offsetReg);
+		prog.emit(Write, new Reg(SPID), new MemAddr(RegE));
+		
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitUnlockStat(UnlockStatContext ctx) {
+		Reg offsetReg = new Reg(RegE);
+		Reg idReg = new Reg(RegD);
+		Reg workReg = new Reg(RegC);
+
+		String nothingWrongLabel = Program.mkLbl(ctx, "noworries");
+		
+		prog.emit(Const, new Value(checkResult.getOffset(ctx) + 1), idReg);
+		prog.emit(Const, new Value(checkResult.getOffset(ctx)), offsetReg);
+
+		prog.emit(Read, new MemAddr(RegD));
+		prog.emit(Receive, workReg);
+		prog.emit(Compute, new Operator(Equal), workReg, new Reg(SPID), workReg);
+		prog.emit(Branch, workReg, new Target(nothingWrongLabel));
+		// TODO: Emit faulty unlock code
+		prog.emit(nothingWrongLabel, Const, new Value(-1), workReg);
+		prog.emit(Write, workReg, new MemAddr(RegD));
+		prog.emit(Write, new Reg(Zero), new MemAddr(RegE));
 		
 		return null;
 	}

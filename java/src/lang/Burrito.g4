@@ -4,7 +4,7 @@ import BurritoVocab;
 
 program: (func | decl)*; 
 	
-decl: type ID ASS expr SEMI;
+decl: type ID (ASS expr)? SEMI;
 	
 func: sig stat* END;
 sig: type ID LPAR (arg (COMMA arg)*)? RPAR;
@@ -22,13 +22,16 @@ stat: type ID ASS expr SEMI					#typeAssignStat
 	| expr? IO newlines SEMI				#outStat
 	| RETURN expr? SEMI						#returnStat
 	| expr SEMI								#exprStat
+	| START ID SEMI							#startStat
+	| LOCK ID SEMI							#lockStat
+	| UNLOCK ID	SEMI						#unlockStat
 	;
 
 block: stat*;
 
 target: ID								#idTarget 
 	| ID (LBRA expr RBRA)+				#arrayTarget
-	| ID PTR+							#ptrTarget
+	| ID DEREF+							#ptrTarget
 	; 
  
 expr: NOT expr								#notExpr
@@ -62,6 +65,7 @@ expr: NOT expr								#notExpr
 type: INT					#intType 
 	| BOOL 					#boolType
 	| CHAR					#charType
+	| LOCKT					#lockType
 	| type LBRA NUM RBRA	#arrayType  
 	;
 	

@@ -1,18 +1,30 @@
 int gA = 0;
+Lock num;
 
->> TODO: Use locks here
 int program()
 	int i = 0; i < 5 @
+		lock num;
+		
 		gA+;
 		gA+;
 		gA+;
 		gA+;
+		
 		gA-;
 		gA-;
 		gA-;
 		gA-;
+		
+		unlock num;
+		
 		i++;
 	.
+
+	lock num;
+	
 	gA|\;
+	
+	unlock num;
+	
 	<- 0;
 .

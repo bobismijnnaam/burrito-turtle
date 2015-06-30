@@ -1,0 +1,14 @@
+Lock b;
+Lock c;
+Lock d;
+Lock a;
+
+int program()
+	lock a;
+
+	123456|\;
+
+	unlock a;
+	
+	<- 0;
+.

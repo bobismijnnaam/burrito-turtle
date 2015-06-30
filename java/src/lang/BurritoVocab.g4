@@ -5,6 +5,9 @@ lexer grammar BurritoVocab;
  */
 
 RETURN: '<-';
+START: '->';
+LOCK: 'lock';
+UNLOCK: 'unlock';
 
 PLUS: '+';
 MIN: '-';
@@ -44,9 +47,11 @@ XOR: '^';
 INT: 'int';
 BOOL: 'bool';
 CHAR: 'char';
+LOCKT: 'Lock';
 AUTO: '$';
-
-PTR: '_';
+LOCAL: '&';
+GLOBAL: '*';
+DEREF: '_';
 
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';

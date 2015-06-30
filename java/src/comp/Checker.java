@@ -30,6 +30,8 @@ import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LockStatContext;
+import lang.BurritoParser.LockTypeContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinAssStatContext;
@@ -48,6 +50,7 @@ import lang.BurritoParser.SigContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
+import lang.BurritoParser.UnlockStatContext;
 import lang.BurritoParser.WhileStatContext;
 import lang.BurritoParser.XorExprContext;
 
@@ -100,10 +103,13 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
 		
-		setType(ctx.ID(), type);		
-		checkType(ctx.expr(), type);
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
+
+		if (ctx.expr() != null) {
+			setType(ctx.ID(), type);		
+			checkType(ctx.expr(), type);
+		}	
 	}
 	
 	// FUNCTIONS ---------------------
@@ -195,6 +201,12 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitCharType(CharTypeContext ctx) {
 		setType(ctx, new Type.Char());
+	}
+	
+	@Override
+	public void exitLockType(LockTypeContext ctx) {
+		// TODO: Check if it's in global scope, if not, add an error or something
+//		addError(ctx, "Lock type only allowed in global scope");
 	}
 	
 	@Override
@@ -565,6 +577,22 @@ public class Checker extends BurritoBaseListener {
 		} else {
 			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
 		}
+	}
+	
+	@Override
+	public void exitLockStat(LockStatContext ctx) {
+		setType(ctx, scope.type(ctx.ID().getText()));
+		checkType(ctx, new Type.Lock());
+		
+		setOffset(ctx, scope.offset(ctx.ID().getText()));
+	}
+	
+	@Override
+	public void exitUnlockStat(UnlockStatContext ctx) {
+		setType(ctx, scope.type(ctx.ID().getText()));
+		checkType(ctx, new Type.Lock());
+
+		setOffset(ctx, scope.offset(ctx.ID().getText()));
 	}
 	
 	// BLOCK THINGY -------------------------------

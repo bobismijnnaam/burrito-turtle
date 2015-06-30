@@ -22,11 +22,21 @@ public class SprockellTest {
 	private final static String EXT = ".symbol";
 	
 	@Test
-	public void simpleGlobals() {
-		// TODO: Use locks in this test
-		String result = compileAndRunFile("SimpleGlobals", 5);
+	public void simpleLocks() {
+		// TODO: Does this need to be more complex?
+		String result = compileAndRunFile("SimpleLocks", 5);
+		System.out.println(result);
 		assertNotNull("Compiling or executing went wrong", result);
-		assertNotEquals("", result);
+	}
+	
+	@Test
+	public void simpleGlobals() {
+		String result = compileAndRunFile("SimpleGlobals", 5);
+		String output = "";
+		for (int i = 0; i < 5; i++)
+			output += "0\n";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized(output, result);
 	}
 
 	@Test
