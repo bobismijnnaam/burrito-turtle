@@ -47,6 +47,8 @@ BOOL: 'bool';
 CHAR: 'char';
 AUTO: '$';
 
+PTR: '_';
+
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';
 

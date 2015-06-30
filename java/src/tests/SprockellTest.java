@@ -200,9 +200,6 @@ public class SprockellTest {
 	
 	public static String compileAndRun(ANTLRInputStream input, int cores) {
 		Program prog = Sprockell.compile(input);
-//		System.out.println("LOC: " + prog.getLineCount());
-		
-//		int file = input.hashCode();
 		int file = 5;
 		
 		if (prog == null) {
@@ -211,10 +208,10 @@ public class SprockellTest {
 		}
 	
 		try {
-			prog.writeToFile(file + ".hs", cores);
+			prog.writeToSir(5 + ".sir");
 			
 			Runtime rt = Runtime.getRuntime();
-			Process buildPr = rt.exec("ghc -i../sprockell/src -e main " + file + ".hs");
+			Process buildPr = rt.exec("bobe.exe " + cores);
 			buildPr.waitFor();
 
 			InputStream is = buildPr.getInputStream();

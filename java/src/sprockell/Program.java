@@ -61,12 +61,16 @@ public class Program {
 		lineMap.put(line, label);
 	}
 	
+	public String prettyString(int indent, boolean printLabels) {
+		return prettyString(indent, printLabels, true, true);
+	}
+	
 	/**
 	 * Prints every instruction line by line
 	 * @param indent The amount of tabs to be inserted before each line
 	 * @return All the instructions as one gigantic string
 	 */
-	public String prettyString(int indent, boolean printLabels) {
+	public String prettyString(int indent, boolean printLabels, boolean printCommas, boolean printNewlines) {
 		String result = "";
 		
 		if (printLabels) {
@@ -92,16 +96,25 @@ public class Program {
 				result += instr.get(i);
 
 				if (i != instr.size() - 1) {
-					result += ",\n";
+					if (printCommas)
+						result += ",";
+					
+					if (printNewlines)
+						result += "\n";
 				}
 			} else {
 				for (int j = 0; j < indent; j++) {
 					result += "\t";
 				}
+				
 				result += instr.get(i);
 				
 				if (i != instr.size() - 1) {
-					result += ",\n";
+					if (printCommas)
+						result += ",";
+					
+					if (printNewlines)
+						result += "\n";
 				}
 			}
 		}
@@ -216,5 +229,14 @@ public class Program {
 
 	public int getLineCount() {
 		return instr.size();
+	}
+
+	public void writeToSir(String file) throws FileNotFoundException {
+		PrintWriter writer = new PrintWriter(file);
+		
+		writer.println(prettyString(0, false, false, true));
+		
+		writer.close();
+		
 	}
 }

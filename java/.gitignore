@@ -3,6 +3,10 @@
 # Created by https://www.gitignore.io
 
 *.hs
+*.o
+*.hi
+*.exe
+*.sir
 
 ### Eclipse ###
 *.pydevproject
