@@ -45,6 +45,7 @@ import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.SigContext;
+import lang.BurritoParser.SwitchStatContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -565,6 +566,12 @@ public class Checker extends BurritoBaseListener {
 		} else {
 			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
 		}
+	}
+	
+	// SWITCH
+	@Override
+	public void exitSwitchStat(SwitchStatContext ctx) {
+		
 	}
 	
 	// BLOCK THINGY -------------------------------
