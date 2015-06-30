@@ -28,6 +28,7 @@ block: stat*;
 
 target: ID								#idTarget 
 	| ID (LBRA expr RBRA)+				#arrayTarget
+	| ID PTR+							#ptrTarget
 	; 
  
 expr: NOT expr								#notExpr

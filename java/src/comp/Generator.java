@@ -61,6 +61,7 @@ import lang.BurritoParser.XorExprContext;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import sprockell.Addr;
 import sprockell.Instr;
 import sprockell.MemAddr;
 import sprockell.Operator;
@@ -86,6 +87,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private String printBoolLabel;
 	private String printIntLabel;
 	private String printCharLabel;
+	
+	// stdio = Addr stdioAddr
+	// stdioAddr = 0x1000000
+	private MemAddr stdio = new MemAddr(new Addr(0x1000000));
 	
 	/**
 	 * Puts a new Program instance into prog, and pushes the old one on the stack.
@@ -757,7 +762,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					
 					for (char c : "true".toCharArray()) {
 						prog.emit(Const, new Value(c), workReg);
-						prog.emit(Write, workReg, new MemAddr("stdio"));
+//						prog.emit(Write, workReg, new MemAddr("stdio"));
+						prog.emit(Write, workReg, stdio);
 					}
 					prog.emit(Jump, new Target(end));
 					
@@ -765,7 +771,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					
 					for (char c : "false".toCharArray()) {
 						prog.emit(Const, new Value(c), workReg);
-						prog.emit(Write, workReg, new MemAddr("stdio"));
+//						prog.emit(Write, workReg, new MemAddr("stdio"));
+						prog.emit(Write, workReg, stdio);
 					}
 					
 					prog.emit(end, Pop, new Reg(RegE));
@@ -812,7 +819,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
 					prog.emit(Branch, workReg, new Target(begin));
 					prog.emit(Const, new Value("-".charAt(0)), workReg);
-					prog.emit(Write, workReg, new MemAddr("stdio"));
+//					prog.emit(Write, workReg, new MemAddr("stdio"));
+					prog.emit(Write, workReg, stdio);
 					prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
 					
 					// Take modulo of current value and save it on the stack
@@ -864,7 +872,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
 					
 					// Output it
-					prog.emit(Write, workReg, new MemAddr("stdio"));
+//					prog.emit(Write, workReg, new MemAddr("stdio"));
+					prog.emit(Write, workReg, stdio);
 					
 					// If all digits have been written to stdio, we're done
 					prog.emit(Compute, new Operator(Equal), new Reg(Zero), countReg, workReg);
@@ -894,7 +903,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					enterFunc(printCharLabel);
 
 					// Output it
-					prog.emit(printCharLabel, Write, new Reg(RegE), new MemAddr("stdio"));
+//					prog.emit(printCharLabel, Write, new Reg(RegE), new MemAddr("stdio"));
+					prog.emit(printCharLabel, Write, new Reg(RegE), stdio);
 					
 					prog.emit(Pop, new Reg(RegE));
 					prog.emit(Jump, new Target(RegE));
@@ -918,7 +928,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// Haskell seems to have no trouble with the \r\n/\n business.
 		if (ctx.newlines().getChildCount() > 0) prog.emit(Const, new Value((int) "\n".toCharArray()[0]), workReg);
 		for (int i = 0; i < ctx.newlines().getChildCount(); i++) {
-			prog.emit(Write, workReg, new MemAddr("stdio"));
+//			prog.emit(Write, workReg, new MemAddr("stdio"));
+			prog.emit(Write, workReg, stdio);
 		}
 		
 		return null;
