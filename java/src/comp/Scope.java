@@ -196,4 +196,8 @@ public class Scope {
 	public Reach reach(String id) {
 		return this.reaches.get(id);
 	}
+	
+	public int getGlobalSize() {
+		return globalSize;
+	}
 }

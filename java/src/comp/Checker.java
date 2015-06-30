@@ -47,6 +47,7 @@ import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.SigContext;
+import lang.BurritoParser.StartStatContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -81,6 +82,8 @@ public class Checker extends BurritoBaseListener {
 		this.errors = new ArrayList<>();
 		
 		new ParseTreeWalker().walk(this, tree);
+		
+		result.setGlobalSize(scope.getGlobalSize());
 		
 		if (hasErrors()) {
 			throw new ParseException(getErrors());
@@ -454,6 +457,17 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	// STATS ----------------------------
+	@Override
+	public void exitStartStat(StartStatContext ctx) {
+		String func = ctx.ID().getText();
+		if (!scope.containsFunc(func)) {
+			addError(ctx, "Function " + func + " not declared");
+			return;
+		}
+		
+		setFunction(ctx, scope.func(func).getOverload(new Type[0]));
+	}
+	
 	@Override
 	public void exitTypeAssignStat(TypeAssignStatContext ctx) {
 		String id = ctx.ID().getText();

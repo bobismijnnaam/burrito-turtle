@@ -15,6 +15,8 @@ public class Result {
 	private final ParseTreeProperty<Function.Overload> functions = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Integer> stackSizes = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Reach> reaches = new ParseTreeProperty<>();
+	
+	private int globalSize;
 
 	/** Adds an association from parse tree node to the flow graph entry. */
 	public void setEntry(ParseTree node, ParserRuleContext entry) {
@@ -73,5 +75,13 @@ public class Result {
 	
 	public Reach getReach(ParseTree node) {
 		return this.reaches.get(node);
+	}
+	
+	public int getGlobalSize() {
+		return this.globalSize;
+	}
+	
+	public void setGlobalSize(int globalSize) {
+		this.globalSize = globalSize;
 	}
 }
