@@ -105,8 +105,12 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 			argTypes[i] = getType(atx);
 		}
 		
-		String result = scope.putFunc(funcName, funcLabel, returnType, argTypes);
+		String result = scope.putFunc(funcName, funcLabel, returnType, ctx.NOT() != null, argTypes);
 		if (result != null) addError(ctx, result);
+		
+		if (ctx.NOT() != null && argTypes.length != 0) {
+			addError(ctx, "Can't define function with arguments parallel: " + ctx.getText());
+		}
 		
 		return 0;
 	}

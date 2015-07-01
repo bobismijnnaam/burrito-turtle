@@ -84,6 +84,7 @@ public class Checker extends BurritoBaseListener {
 		new ParseTreeWalker().walk(this, tree);
 		
 		result.setGlobalSize(scope.getGlobalSize());
+		result.setSprockells(scope.getSprockells());
 		
 		if (hasErrors()) {
 			throw new ParseException(getErrors());

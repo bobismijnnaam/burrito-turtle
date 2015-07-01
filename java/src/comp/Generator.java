@@ -73,12 +73,12 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+
 import comp.Type.Array;
-import static sprockell.Operator.Which.*;
 
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
-	public final String MAINMETHOD = "program";
+	public static final String MAINMETHOD = "program";
 	
 	private Program prog;
 	private Result checkResult;
@@ -91,17 +91,13 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private String printBoolLabel;
 	private String printIntLabel;
 	private String printCharLabel;
-	private String startFuncLabel;
-	
-	private String idleLoopLabel;
+	private String idleFuncLabel;
 	
 	// stdio = Addr stdioAddr
 	// stdioAddr = 0x1000000
 	private final MemAddr stdio = new MemAddr(new Addr(0x1000000));
 	
-	private int cores = 1;
-
-	private final int sprockellSegmentSize = 2;
+	private final int sprockellSegmentSize = 1;
 	
 	/**
 	 * Puts a new Program instance into prog, and pushes the old one on the stack.
@@ -119,7 +115,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 
 	public Program generate(ParseTree tree, Result checkResult, int cores) {
-		this.cores = cores;
 		this.prog = new Program();
 		this.checkResult = checkResult;
 		tree.accept(this);
@@ -136,11 +131,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		endLabel = Program.mkLbl(ctx, "done");
 		Reg zero = new Reg(Zero);
 
-		includeStartFunc(ctx.hashCode()+"");
 		includeIdleFunc();
 		
 		prog.emit(Compute, new Operator(NEq), new Reg(SPID), new Reg(Zero), new Reg(RegE));
-		prog.emit(Branch, new Reg(RegE), new Target(idleLoopLabel));
+		prog.emit(Branch, new Reg(RegE), new Target(idleFuncLabel));
 		
 		// Only the manager thread gets to initialize the shared memory
 		for (DeclContext dtx : ctx.decl()) {
@@ -151,60 +145,17 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		for (FuncContext asc : ctx.func()) {
 			visit(asc);
 		}
-		
-		// First we start a main function
-		String returnAfterStartLabel = Program.mkLbl(ctx, "returnafterstartingmain");
-		String endAllSprockells = Program.mkLbl(ctx, "endAllSprockells");
-		String manageSprockellLoop =  Program.mkLbl(ctx, "manage");
-		String sprockellEnderLoop = Program.mkLbl(ctx, "someleft");
 
-
-		prog.emit(Const, new Value(returnAfterStartLabel), new Reg(RegE));
-		prog.emit(Push, new Reg(RegE));
-		prog.emit(Const, new Value(mainLabel), new Reg(RegE));
-		prog.emit(Push, new Reg(RegE));
-		prog.emit(Jump, new Target(startFuncLabel));
-		prog.emit(returnAfterStartLabel, Nop); // Main function should be rolling here :)
-		
-		// Loop until the Active Sprockell Counter reaches zero
-		prog.emit(Const, new Value(checkResult.getGlobalSize() + 2), new Reg(RegE)); // RegE holds address for sprockell counter
-		prog.emit(manageSprockellLoop, Read, new Reg(RegE));
-		prog.emit(Receive, new Reg(RegD));
-		prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegD));
-		prog.emit(Branch, new Reg(RegD), new Target(endAllSprockells));
-		prog.emit(Jump, new Target(manageSprockellLoop));
-		
-		// After the manager is done
-		// He stops all the sprockells
-		// And then he jumps to the end
-		prog.emit(Const, new Value(cores), new Reg(RegE));
-		prog.emit(Const, new Value(endLabel), new Reg(RegD));
-		prog.emit(Const, new Value(checkResult.getGlobalSize()), new Reg(RegC));
-		prog.emit(Const, new Value(0), new Reg(RegB));
-		
-		prog.emit(Const, new Value(1), new Reg(RegA));
-		prog.emit(Compute, new Operator(Add), new Reg(RegA), new Reg(RegC), new Reg(RegC)); // Set RegC to point to the next function address of the first sprockell segment
-
-		prog.emit(sprockellEnderLoop, Compute, new Operator(Equal), new Reg(RegB), new Reg(RegE), new Reg(RegA));
-		prog.emit(Branch, new Reg(RegA), new Target(endLabel)); // If we've told each sprockell, jump to end
-		prog.emit(Const, new Value(endLabel), new Reg(RegA)); // Load the address of the end
-		prog.emit(Write, new Reg(RegA), new Reg(RegC)); // Write it to the current sprockell
-		prog.emit(Const, new Value(sprockellSegmentSize), new Reg(RegA)); // Load the segment size
-		prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegA), new Reg(RegC)); // Move on to the next sprockell
-		prog.emit(Const, new Value(1), new Reg(RegA));
-		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegA), new Reg(RegB)); // Increase the counter
-
-		// TODO: Threads have to do this when they start
-//		// Start making the final program here
-//		// First construct the "fake" stack for program()
-//		prog.emit(Const, new Value(endLabel), new Reg(RegE));
-//		prog.emit(Push, new Reg(RegE)); // Return address
-//		// No parameters, so nothing to push here. Maybe a TODO?
-//		// We push a zero here to let the ARP point to the FIRST byte after the last parameter
-//		// (or the return value of there were no parameters)
-//		prog.emit(Push, zero);
-//		prog.emit(Compute, new Operator(Add), new Reg(SP), zero, new Reg(RegA)); // Set the initial ARP
-//		prog.emit(Jump, new Target(mainLabel));
+		// Start making the final program here
+		// First construct the "fake" stack for program()
+		prog.emit(Const, new Value(endLabel), new Reg(RegE));
+		prog.emit(Push, new Reg(RegE)); // Return address
+		// No parameters, so nothing to push here. Maybe a TODO?
+		// We push a zero here to let the ARP point to the FIRST byte after the last parameter
+		// (or the return value of there were no parameters)
+		prog.emit(Push, zero);
+		prog.emit(Compute, new Operator(Add), new Reg(SP), zero, new Reg(RegA)); // Set the initial ARP
+		prog.emit(Jump, new Target(mainLabel));
 		
 		// Finishing up the program happens after this line
 		
@@ -685,14 +636,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitIdExpr(IdExprContext ctx) {
-//		System.out.println("Visiting " + ctx.getText());
-//		if (checkResult.getReach(ctx) == Reach.Global) {
-//			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
-//		}
-//		if (checkResult.getReach(ctx) == Reach.Local) {
-//			System.out.println(ctx.getText() + " is " + checkResult.getReach(ctx).toString());
-//		}
-		
 		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
 		
 		Reach reach = checkResult.getReach(ctx);
@@ -797,7 +740,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 		// Put return value into register E, ofcourse
 		prog.emit(Pop, new Reg(RegE));
-//		prog.emit(Const, new Value(99), new Reg(RegE));
 		
 		return null;
 	}
@@ -873,7 +815,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					
 					for (char c : "true".toCharArray()) {
 						prog.emit(Const, new Value(c), workReg);
-//						prog.emit(Write, workReg, new MemAddr("stdio"));
 						prog.emit(Write, workReg, stdio);
 					}
 					prog.emit(Jump, new Target(end));
@@ -882,7 +823,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					
 					for (char c : "false".toCharArray()) {
 						prog.emit(Const, new Value(c), workReg);
-//						prog.emit(Write, workReg, new MemAddr("stdio"));
 						prog.emit(Write, workReg, stdio);
 					}
 					
@@ -930,7 +870,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
 					prog.emit(Branch, workReg, new Target(begin));
 					prog.emit(Const, new Value("-".charAt(0)), workReg);
-//					prog.emit(Write, workReg, new MemAddr("stdio"));
 					prog.emit(Write, workReg, stdio);
 					prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
 					
@@ -1014,7 +953,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					enterFunc(printCharLabel);
 
 					// Output it
-//					prog.emit(printCharLabel, Write, new Reg(RegE), new MemAddr("stdio"));
 					prog.emit(printCharLabel, Write, new Reg(RegE), stdio);
 					
 					prog.emit(Pop, new Reg(RegE));
@@ -1036,10 +974,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		Reg workReg = new Reg(RegE);
-		// Haskell seems to have no trouble with the \r\n/\n business.
 		if (ctx.newlines().getChildCount() > 0) prog.emit(Const, new Value((int) "\n".toCharArray()[0]), workReg);
 		for (int i = 0; i < ctx.newlines().getChildCount(); i++) {
-//			prog.emit(Write, workReg, new MemAddr("stdio"));
 			prog.emit(Write, workReg, stdio);
 		}
 		
@@ -1048,157 +984,45 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitStartStat(StartStatContext ctx) {
-		includeStartFunc(""+ctx.hashCode());
-		
-		String returnAfterStartLabel = Program.mkLbl(ctx, "returnHereAfterStart");
 		Function.Overload func = checkResult.getFunction(ctx);
 		
-		prog.emit(Const, new Value(returnAfterStartLabel), new Reg(RegE));
-		prog.emit(Push, new Reg(RegE));
-		prog.emit(Const, new Value(func.label), new Reg(RegE));
-		prog.emit(Push, new Reg(RegE));
-		prog.emit(Jump, new Target(startFuncLabel));
-		prog.emit(returnAfterStartLabel, Nop);
+		prog.emit(Const, new Value(checkResult.getSprockellSegment()), new Reg(RegE));
+		prog.emit(Const, new Value(func.sprockell * sprockellSegmentSize), new Reg(RegD));
+		prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+		prog.emit(Const, new Value(func.label), new Reg(RegD));
+		prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
 
 		return null;
 	}
-	
-	private void includeStartFunc(String prefix) {
-		if (startFuncLabel == null) {
-			startFuncLabel = "asyncStartFunc";
 
-			enterFunc(startFuncLabel);
+	private void includeIdleFunc() {
+		if (idleFuncLabel == null) {
+			idleFuncLabel = "idleFunc";
 			
-			// When we enter this, the function we have to start on some sprockell is on the stack
-			// And under that is the return address
+			enterFunc(idleFuncLabel);
 			
-			// The + 1 is the allocator lock.
-			// Offset now contains the offset of the first Sprokkel Segment
-			// This can be multiplied by SPID to get to the current sprokkel's segment
-			int offset = checkResult.getGlobalSize() + 1;
-			String loopLabel = prefix + "sprokkeloop";
-			String doneLabel = prefix + "again";
-			String endLabel = prefix + "finished";
-			
-			Reg offsetReg = new Reg(RegE);
-			Reg countReg = new Reg(RegD);
-			Reg workReg = new Reg(RegC);
-			Reg workReg2 = new Reg(RegB);
-			Reg zero = new Reg(Zero);
-			
-			prog.emit(startFuncLabel, Const, new Value(offset), offsetReg);
-			prog.emit(Const, new Value(0), countReg);
-			
-			// Loop over all the sprockells until one frees
-			// count % cores, to not go out of bounds
-			prog.emit(loopLabel, Const, new Value(cores), workReg);
-			prog.emit(Compute, new Operator(Mod), countReg, workReg, countReg);
-			
-			// Subtract one from SPID, because Sprokkel 0 is the thread manager
-			prog.emit(Const, new Value(1), workReg);
-			prog.emit(Compute, new Operator(Sub), new Reg(SPID), workReg, workReg);
-			
-			// If the current sprockell equals the next sprockell to visit, skip it (obviously)
-			prog.emit(Compute, new Operator(Equal), workReg, countReg, workReg);
-			prog.emit(Branch, workReg, new Target(doneLabel));
-			
-			prog.emit(Const, new Value(sprockellSegmentSize), workReg);
-			prog.emit(Compute, new Operator(Mul), countReg, workReg, workReg);
-			prog.emit(Compute, new Operator(Add), workReg, offsetReg, workReg);
-			
-			// Workreg now contains the address of the next to check Sprokkel Segment
-			prog.emit(TestAndSet, workReg);
-			prog.emit(Receive, workReg);
-			
-			// If workreg equals zero (and thus locking failed), we should check out the next sprockell
-			prog.emit(Compute, new Operator(Equal), workReg, zero, workReg2);
-			prog.emit(Branch, workReg2, new Target(doneLabel));
-			
-			// Otherwise we got the lock!
-			// Set the target function, unlock it, and continue this function's flow!
-			
-			prog.emit(Const, new Value(1), workReg2);
-			prog.emit(Compute, new Operator(Add), workReg, workReg2, workReg);
-			prog.emit(Pop, workReg2); // Since the address was on top of the heap, it is now in workReg2
-			prog.emit(Write, workReg2, new MemAddr(RegC)); // RegW == workReg
-			prog.emit(Const, new Value(1), workReg2);
-			prog.emit(Compute, new Operator(Sub), workReg, workReg2, workReg);
-			prog.emit(Write, zero, workReg);
-			prog.emit(Jump, new Target(endLabel));
-			
-			prog.emit(doneLabel, Const, new Value(1), workReg);
-			prog.emit(Compute, new Operator(Add), workReg, countReg, countReg);
-			prog.emit(Jump, new Target(loopLabel));
-			
-			prog.emit(endLabel, Pop, workReg); // We're done!
-			prog.emit(Jump, workReg);
-			
-			leaveFunc();
-		}
-	}
-	
-	private void includeIdleFunc(String prefix) {
-		if (idleLoopLabel != null) {
-			idleLoopLabel = "idleLoopFunc";
-			
-			enterFunc(idleLoopLabel);
-			
-			String loopLabel = prefix + "_loopLabel";
-			String notZero = prefix + "_notzero";
-			String returnLabelAfterFunction = prefix + "_returnAfterFunc";
-			
-			prog.emit(loopLabel, Const, new Value(sprockellSegmentSize), new Reg(RegE));
-			prog.emit(Const, new Value(checkResult.getGlobalSize()), new Reg(RegD));
-			prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(SPID), new Reg(RegE));
+			prog.emit(idleFuncLabel, Const, new Value(checkResult.getSprockellSegment()), new Reg(RegE));
+			prog.emit(Const, new Value(sprockellSegmentSize), new Reg(RegD));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegD), new Reg(SPID), new Reg(RegD));
 			prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegE), new Reg(RegE));
-			prog.emit(TestAndSet, new Reg(RegE));
+			prog.emit(Read, new MemAddr(RegE));
 			prog.emit(Receive, new Reg(RegD));
-			prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegD));
-			prog.emit(Branch, new Target(loopLabel));
+			prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegE));
+			prog.emit(Branch, new Reg(RegE), new Target(idleFuncLabel));
 			
-			// We got the lock!
-			// Now we're gonna check if it changed to something else than null (the instruction thing)
-			// (zero is the base value)
-			prog.emit(Const, new Value(1), new Reg(RegD));
-			prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegE), new Reg(RegD));
-			prog.emit(Read, new Reg(RegD));
-			prog.emit(Receive, new Reg(RegE));
-			prog.emit(Compute, new Operator(NEq), new Reg(RegE), new Reg(Zero), new Reg(RegC));
-			prog.emit(Branch, new Reg(RegC), new Target(notZero));
+			// Start making the final thread stack etc. here
+			// First construct the "fake" stack for program()
+			prog.emit(Const, new Value(endLabel), new Reg(RegE));
+			prog.emit(Push, new Reg(RegE)); // Return address
+			// No parameters, so nothing to push here. Maybe a TODO?
+			// We push a zero here to let the ARP point to the FIRST byte after the last parameter
+			// (or the return value of there were no parameters)
+			prog.emit(Push, new Reg(Zero));
+			prog.emit(Compute, new Operator(Add), new Reg(SP), new Reg(Zero), new Reg(RegA)); // Set the initial ARP
 			
-			// We end up here if it still is zero
-			// Thus we ned to check again
-			prog.emit(Write, new Reg(Zero), new Reg(RegD)); // Release the lock
-			prog.emit(Jump, new Target(loopLabel));
+			prog.emit(Jump, new Target(RegD));
 			
-//		// Start making the final program here
-//		// First construct the "fake" stack for program()
-//		prog.emit(Const, new Value(endLabel), new Reg(RegE));
-//		prog.emit(Push, new Reg(RegE)); // Return address
-//		// No parameters, so nothing to push here. Maybe a TODO?
-//		// We push a zero here to let the ARP point to the FIRST byte after the last parameter
-//		// (or the return value of there were no parameters)
-//		prog.emit(Push, zero);
-//		prog.emit(Compute, new Operator(Add), new Reg(SP), zero, new Reg(RegA)); // Set the initial ARP
-//		prog.emit(Jump, new Target(mainLabel));
-
-			// TODO: Increment/decrement the counter of buzzy sprockells!
-			prog.emit(notZero, Write, new Reg(Zero), new Reg(RegD)); // Set the target address to zero, to prevent jumping next time
-			prog.emit(Const, new Value(returnLabelAfterFunction), new Reg(RegD)); // We end up here if the instruction is not zero!
-			prog.emit(Push, new Reg(RegD));
-			prog.emit(Push, new Reg(Zero)); // Push a zero here to align the stack to point to the NEXT element after the top element
-			prog.emit(Compute, new Operator(Add), new Reg(SP), new Reg(Zero), new Reg(RegA));
-			prog.emit(Jump, new Target(RegE)); // Jump to the address we found in memory!
-			
-			prog.emit(returnLabelAfterFunction, Const, new Value(sprockellSegmentSize), new Reg(RegE));
-			prog.emit(Const, new Value(checkResult.getGlobalSize()), new Reg(RegD));
-			prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(SPID), new Reg(RegE));
-			prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegE), new Reg(RegE));
-			prog.emit(Write, new Reg(Zero), new Reg(RegE)); // Reset the lock
-			// TODO: Jump to the beginning of the idle loop again.
-		
 			leaveFunc();
 		}
 	}
-	
 }

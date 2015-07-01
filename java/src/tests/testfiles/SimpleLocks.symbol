@@ -1,14 +1,36 @@
-Lock b;
-Lock c;
-Lock d;
-Lock a;
+Lock out;
 
 int program()
-	lock a;
+	-> worker1;
+	-> worker2;
+	-> worker3;
+	-> worker4;
+	
+	<- 0;
+.
 
-	123456|\;
+int~ worker1()
+	<- outputStuff();
+.
 
-	unlock a;
+int~ worker2()
+	<- outputStuff();
+.
+
+int~ worker3()
+	<- outputStuff();
+.
+
+int~ worker4()
+	<- outputStuff();
+.
+
+int outputStuff()
+	lock out;
+	
+	12345|\;
+	
+	unlock out;
 	
 	<- 0;
 .

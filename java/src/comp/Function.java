@@ -17,6 +17,8 @@ class Function {
 		public String label;
 		public Type[] args;
 		public Function func;
+		public boolean parallel;
+		public int sprockell;
 		
 		/**
 		 * Prints a pretty representation of the overload.
@@ -43,7 +45,13 @@ class Function {
 				}
 			}
 			
-			return r + ")";
+			r += " ";
+					
+			if (parallel) r += " is parallel on sprockell " + sprockell + " )";
+			else
+				r += ")";
+			
+			return r;
 		}
 	}
 	
@@ -79,12 +87,14 @@ class Function {
 	 * @param label The location of the overload in the final program
 	 * @return An error (in the form of a string) if something went wrong. null if it went ok.
 	 */
-	public String registerOverload(Type[] args, String label) {
+	public String registerOverload(Type[] args, String label, boolean parallel, int sprockell) {
 		Overload overload = new Overload();
 		
 		overload.args = args;
 		overload.label = label;
 		overload.func = this;
+		overload.parallel = parallel;
+		overload.sprockell = sprockell;
 		
 		for (Overload ol : overloads) {
 			if (ol.args.length == 0 && overload.args.length == 0) return "Overload already registered";

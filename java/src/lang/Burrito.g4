@@ -7,8 +7,8 @@ program: (func | decl)*;
 decl: type ID (ASS expr)? SEMI;
 	
 func: sig stat* END;
-sig: type ID LPAR (arg (COMMA arg)*)? RPAR;
-arg: type ID;		
+sig: type NOT? ID LPAR (arg (COMMA arg)*)? RPAR;
+arg: type ID;
 
 stat: type ID ASS expr SEMI					#typeAssignStat
 	| target ASS expr SEMI					#assStat

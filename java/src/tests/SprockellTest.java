@@ -23,18 +23,20 @@ public class SprockellTest {
 	
 	@Test
 	public void simpleLocks() {
-		// TODO: Does this need to be more complex?
 		String result = compileAndRunFile("SimpleLocks", 5);
-		System.out.println(result);
+		String output = "";
+		for (int i = 0; i < 4; i++)
+			output += "12345\n";
+
 		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized(output, result);
 	}
 	
 	@Test
 	public void simpleGlobals() {
-		String result = compileAndRunFile("SimpleGlobals", 5);
+		String result = compileAndRunFile("SimpleGlobals", 1);
 		String output = "";
-		for (int i = 0; i < 5; i++)
-			output += "0\n";
+		output += "0\n";
 		assertNotNull("Compiling or executing went wrong", result);
 		assertSanitized(output, result);
 	}

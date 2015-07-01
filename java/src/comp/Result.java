@@ -17,6 +17,7 @@ public class Result {
 	private final ParseTreeProperty<Reach> reaches = new ParseTreeProperty<>();
 	
 	private int globalSize;
+	private int sprockells;
 
 	/** Adds an association from parse tree node to the flow graph entry. */
 	public void setEntry(ParseTree node, ParserRuleContext entry) {
@@ -77,11 +78,23 @@ public class Result {
 		return this.reaches.get(node);
 	}
 	
+	public int getSprockellSegment() {
+		return globalSize + 1;
+	}
+	
 	public int getGlobalSize() {
 		return this.globalSize;
 	}
 	
 	public void setGlobalSize(int globalSize) {
 		this.globalSize = globalSize;
+	}
+	
+	public void setSprockells(int sprockells) {
+		this.sprockells = sprockells;
+	}
+	
+	public int minimumSprockells() {
+		return sprockells;
 	}
 }
