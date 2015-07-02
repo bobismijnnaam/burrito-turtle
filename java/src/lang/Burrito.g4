@@ -9,7 +9,7 @@ decl: type ID (ASS expr)? SEMI;
 func: sig stat* END;
 sig: type NOT? ID LPAR (arg (COMMA arg)*)? RPAR;
 arg: type ID			#plainArg
-	| type LBRA RBRA	#anyArrayArg
+	| type LBRA RBRA ID	#anyArrayArg
 	;
 
 stat: type ID ASS expr SEMI					#typeAssignStat

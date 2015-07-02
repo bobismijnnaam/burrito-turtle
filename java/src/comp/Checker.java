@@ -46,6 +46,7 @@ import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.OrExprContext;
 import lang.BurritoParser.OutStatContext;
 import lang.BurritoParser.ParExprContext;
+import lang.BurritoParser.PlainArgContext;
 import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
@@ -171,7 +172,7 @@ public class Checker extends BurritoBaseListener {
 	};
 	
 	@Override
-	public void exitArg(ArgContext ctx) {
+	public void exitPlainArg(PlainArgContext ctx) {
 		String argID = ctx.ID().getText();
 		Type argType = getType(ctx.type());
 

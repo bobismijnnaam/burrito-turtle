@@ -11,6 +11,7 @@ import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.FuncContext;
 import lang.BurritoParser.IntTypeContext;
 import lang.BurritoParser.LockTypeContext;
+import lang.BurritoParser.PlainArgContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.SigContext;
 import lang.BurritoParser.VoidTypeContext;
@@ -109,7 +110,7 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	}
 	
 	@Override
-	public Integer visitArg(ArgContext ctx) {
+	public Integer visitPlainArg(PlainArgContext ctx) {
 		visit(ctx.type());
 		setType(ctx, getType(ctx.type()));
 
