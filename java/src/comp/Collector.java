@@ -109,7 +109,7 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return 0;
 	}
 	
-	@Override
+	@Override 
 	public Integer visitPlainArg(PlainArgContext ctx) {
 		visit(ctx.type());
 		setType(ctx, getType(ctx.type()));

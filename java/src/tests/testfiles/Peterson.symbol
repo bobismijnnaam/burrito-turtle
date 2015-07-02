@@ -46,7 +46,7 @@ void~ worker0()
 	
 	worker0done = true;
 	
-	<- 0;
+	<-;
 .
 
 void~ worker1()

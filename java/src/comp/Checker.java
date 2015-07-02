@@ -51,11 +51,8 @@ import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.SigContext;
-<<<<<<< HEAD
 import lang.BurritoParser.StartStatContext;
-=======
 import lang.BurritoParser.SwitchStatContext;
->>>>>>> c23330544d34b8f623f054acb9d2bb205aba191e
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;

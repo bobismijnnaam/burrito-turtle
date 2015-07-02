@@ -11,7 +11,7 @@ UNLOCK: 'unlock';
 LENGTH: 'len';
 
 PLUS: '+';
-MIN: '-';
+MIN: '-';  
 MUL: '*';
 DIV: '/';
 MOD: '%';

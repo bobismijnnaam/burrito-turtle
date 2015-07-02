@@ -12,7 +12,7 @@ arg: type ID			#plainArg
 	| type LBRA RBRA ID	#anyArrayArg
 	;
 
-stat: type ID ASS expr SEMI						#typeAssignStat
+stat: type ID ASS expr SEMI						#typeAssignStat 
 	| target ASS expr SEMI						#assStat
 	| target PLUS ASS expr SEMI					#plusAssStat
 	| target MIN ASS expr SEMI					#minAssStat
@@ -21,13 +21,13 @@ stat: type ID ASS expr SEMI						#typeAssignStat
 	| expr IF block (ELSE block)? END			#ifStat
 	| expr WHILE block END						#whileStat
 	| type ID SEMI								#typeStat
-	| expr? IO newlines SEMI					#outStat
+	| expr? IO NOT? newlines SEMI					#outStat
 	| RETURN expr? SEMI							#returnStat
 	| expr SEMI									#exprStat
 	| ID IF (NUM block)* (DEFAULT block)? END	#switchStat
-	| START ID SEMI							#startStat
-	| LOCK ID SEMI							#lockStat
-	| UNLOCK ID	SEMI						#unlockStat
+	| START ID SEMI								#startStat
+	| LOCK ID SEMI								#lockStat
+	| UNLOCK ID	SEMI							#unlockStat
 	;
 
 block: stat*;
