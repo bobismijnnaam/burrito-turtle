@@ -33,6 +33,8 @@ import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IncExprContext;
+import lang.BurritoParser.LitExprContext;
+import lang.BurritoParser.LiteralExprContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinAssStatContext;
@@ -52,6 +54,7 @@ import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.ReturnStatContext;
 import lang.BurritoParser.StatContext;
+import lang.BurritoParser.SwitchStatContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -60,6 +63,7 @@ import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import sprockell.Addr;
 import sprockell.Instr;
@@ -378,6 +382,49 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 	
 	@Override
+	public List<Instr> visitSwitchStat(SwitchStatContext ctx) {
+		String defaultLabel = mkLbl(ctx, "default");
+		String endLabel = mkLbl(ctx, "end");
+		
+		int curCase = 1;
+		int block = 0;
+		
+		String endCaseLabel = mkLbl(ctx, "case" + curCase + "end");
+		
+		// put value to switch on in E
+		visit(ctx.expr());
+		prog.emit(Push, new Reg(RegE));
+		prog.emit(Pop, new Reg(RegD));
+		
+		// for each case
+		for (LitExprContext lit : ctx.litExpr()) {
+			visit(lit);
+			prog.emit(Compute, new Operator(NEq), new Reg(RegD), new Reg(RegE), new Reg(RegC));
+			prog.emit(Branch, new Reg(RegC), new Target(endCaseLabel));
+			visit(ctx.block(block));
+			block++;
+			curCase++;
+			prog.emit(Jump, new Target(endLabel));
+			prog.emit(endCaseLabel, Nop);
+			endCaseLabel = mkLbl(ctx, "case" + curCase + "end");
+		}
+		
+		// default case
+		if (ctx.DEFAULT() != null) {
+			prog.emit(defaultLabel, Nop);
+			if (!ctx.block().isEmpty()) {
+				visit(ctx.block(ctx.block().size() - 1));
+			} else {
+				visit(ctx.block(0));
+			}
+			prog.emit(Jump, new Target(endLabel));
+		}
+		
+		prog.emit(endLabel, Nop);
+		return null;
+	}
+	
+	@Override
 	public List<Instr> visitBlock(BlockContext ctx) {
 		for (StatContext asc : ctx.stat()) {
 			visit(asc);
@@ -627,6 +674,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitNegExpr(NegExprContext ctx) {
 		visit(ctx.expr());
 		prog.emit(Compute, new Operator(Sub), new Reg(Zero), new Reg(RegE), new Reg(RegE));
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitLiteralExpr(LiteralExprContext ctx) {
+		visit(ctx.getChild(0));
 		return null;
 	}
 	

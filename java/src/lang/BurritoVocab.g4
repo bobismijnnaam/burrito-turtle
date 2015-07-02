@@ -5,13 +5,15 @@ lexer grammar BurritoVocab;
  */
 
 RETURN: '<-';
-
+DEFAULT: ANY COLON;
+ANY : 'any';
 PLUS: '+';
 MIN: '-';
 MUL: '*';
 DIV: '/';
 MOD: '%';
 POW: '**';
+IMPORT: 'pls';
 
 EQ: '==';
 LT: '<';
@@ -22,7 +24,6 @@ NOT: '~';
 
 ASS: '=';
 ELSE: '!';
-DEFAULT: '!!';
 IF: '?';
 WHILE: '@';
 IO: '|';
@@ -37,7 +38,7 @@ LBRA: '[';
 RBRA: ']';
 
 CHARACTER: '\'' (~'\'' | '\\' '\'') '\''; 
-
+PATH: '"' (~'"' | '""')* '"';
 AND: '&&';
 OR: '||';
 XOR: '^';

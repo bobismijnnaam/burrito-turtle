@@ -16,7 +16,7 @@ replace keywords with symbols; hence the name of
 the language "Symbol" was born.
 
 [CREDITS] Special thanks to Arend Rensink for the
-useful lectures about compiler construction.
+useful lectures about compiler construction. 
 
 
 [CHAPTER I LEXICAL ELEMENTS "TOKENS"]

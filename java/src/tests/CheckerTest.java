@@ -17,9 +17,11 @@ import org.junit.Test;
 
 import sprockell.Program;
 import comp.Checker;
+import comp.Collector;
 import comp.Generator;
 import comp.ParseException;
 import comp.Result;
+import comp.Scope;
 import comp.Type;
  
 public class CheckerTest {
@@ -209,6 +211,52 @@ public class CheckerTest {
 		try {
 			Result checkResult = checker.check(result);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+	}
+	
+	@Test
+	public void switchTest() {
+		String testProgram = "int program() int x = 0; <x> 1: x = 3; . <- 0;.";
+		ParseTree result = parse(testProgram);
+		Collector funCol = new Collector();
+		
+		Checker checker = new Checker();
+
+		try {
+			Scope scope = funCol.generate(result);
+			Result checkResult = checker.check(result, scope);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(false, checker.hasErrors());
+		
+		// switch id not initialized
+//		testProgram = "int program() <x> 1: x = 2; . .";
+//		result = parse(testProgram);
+//		checker = new Checker();
+//		try {
+//			Result checkResult = checker.check(result);
+//		} catch (ParseException e) {
+//		}
+//		
+//		assertEquals(true, checker.hasErrors());
+	}
+	
+	@Test
+	public void imporTest() {
+		String testProgram = "pls ruben; int program() .";
+		ParseTree result = parse(testProgram);
+		Collector funCol = new Collector();
+		Checker checker = new Checker();
+
+		try {
+			Scope scope = funCol.generate(result);
+			Result checkResult = checker.check(result, scope);
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}

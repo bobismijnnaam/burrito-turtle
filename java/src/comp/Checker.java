@@ -28,8 +28,11 @@ import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
+import lang.BurritoParser.ImpContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LitExprContext;
+import lang.BurritoParser.LiteralExprContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
 import lang.BurritoParser.MinAssStatContext;
@@ -57,7 +60,6 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import sprockell.Program;
 import comp.Type.Array;
 
 public class Checker extends BurritoBaseListener {
@@ -89,6 +91,12 @@ public class Checker extends BurritoBaseListener {
 	
 	//*************************
 	// START OF TYPE CHECKING
+	
+	// IMPORTS ------------------------
+	@Override
+	public void exitImp(ImpContext ctx) {
+		//System.out.println(ctx.ID().getText());
+	}
 	
 	// GLOBALS -----------------------
 	
@@ -272,13 +280,20 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	@Override
+	public void exitLiteralExpr(LiteralExprContext ctx) {
+		setType(ctx, getType(ctx.getChild(0)));
+	}
+	
+	@Override
 	public void exitIdExpr(IdExprContext ctx) {
 		String id = ctx.getText();
 		Type type = this.scope.type(id);
+		
 		setType(ctx, type);
-		checkType(ctx, type);
-		setOffset(ctx, this.scope.offset(id));
-		setReach(ctx, this.scope.reach(id));
+		if (checkType(ctx, type)) {
+			setOffset(ctx, this.scope.offset(id));
+			setReach(ctx, this.scope.reach(id));
+		}
 	}
 	
 	@Override
@@ -460,7 +475,7 @@ public class Checker extends BurritoBaseListener {
 	public void exitTypeStat(TypeStatContext ctx) {
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
-		
+
 		// TODO: Is this correct? Just want to make sure - Bob
 //		if (ctx.getChildCount() > 0) {
 //		if (type instanceof Type.Array) {
@@ -571,7 +586,19 @@ public class Checker extends BurritoBaseListener {
 	// SWITCH
 	@Override
 	public void exitSwitchStat(SwitchStatContext ctx) {
-		
+		// :TODO clean switch stat
+		//System.out.println(id);
+		Type type = getType(ctx.expr());
+		//System.out.println(type);
+		if (type != null) {
+			setType(ctx, type);
+			
+			for (LitExprContext lit : ctx.litExpr()) {
+				checkType(lit, type);
+			}
+		} else {
+			addError(ctx, "Missing inferred type of " + ctx.expr().getText());
+		}
 	}
 	
 	// BLOCK THINGY -------------------------------

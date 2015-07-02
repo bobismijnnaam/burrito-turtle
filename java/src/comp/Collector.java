@@ -7,6 +7,7 @@ import lang.BurritoBaseVisitor;
 import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.BoolTypeContext;
+import lang.BurritoParser.CharTypeContext;
 import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.FuncContext;
 import lang.BurritoParser.IntTypeContext;
@@ -19,7 +20,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
 import sprockell.Program;
-
 import comp.Type.Array;
 
 /**
@@ -105,6 +105,7 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 			argTypes[i] = getType(atx);
 		}
 		
+		//System.out.println(funcName + "Returns: " + returnType);
 		String result = scope.putFunc(funcName, funcLabel, returnType, argTypes);
 		if (result != null) addError(ctx, result);
 		
@@ -124,6 +125,12 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	@Override
 	public Integer visitBoolType(BoolTypeContext ctx) {
 		setType(ctx, new Type.Bool());
+		return 0;
+	}
+	
+	@Override
+	public Integer visitCharType(CharTypeContext ctx) {
+		setType(ctx, new Type.Char());
 		return 0;
 	}
 	

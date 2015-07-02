@@ -1,0 +1,52 @@
+int program()
+	int x = 2;
+	>> Switch int test
+	returnIf123(x)|;
+	
+	>> Switch char test
+	char c = 'b';
+	returnIfAbc(c)|;
+	
+	>> Switch bool test
+	bool b = true;
+	switchBool(b)|;
+	
+	<- 0;
+.
+
+int returnIf123(int x) 
+	<x>
+		1:
+			<- 1;
+		2:	
+			<- 2;
+		3: 
+			<- 3;
+		any:
+			<- 0;
+	.
+.
+
+char returnIfAbc(char c) 
+	<c>
+		'a': 
+			<- 'a';
+		'b': 
+			<- 'b';
+		'c': 
+			<- 'c';
+		any:
+			<- ' ';
+	.
+.
+
+bool switchBool(bool b) 
+	<b>
+		true:
+			<- true;
+		false:
+			<- false;
+		any:
+			<- false;
+	.
+.

@@ -6,6 +6,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 import lang.BurritoLexer;
 import lang.BurritoParser;
@@ -18,9 +24,10 @@ import org.antlr.v4.runtime.tree.ParseTree;
 
 import sprockell.Operand.Type;
 import comp.Checker;
-import comp.ErrorListener;
 import comp.Collector;
+import comp.ErrorListener;
 import comp.Generator;
+import comp.Importer;
 import comp.ParseException;
 import comp.Result;
 import comp.Scope;
@@ -159,6 +166,59 @@ public class Sprockell {
 			System.out.println("Something went wrong");
 			return null;
 		}
+	}
+	
+	public static Program compileImport(File file) {
+		// Get the first string of file
+		String input = getStringFromFile(file);
+		String path = file.getAbsolutePath();
+		path = path.replace(file.getName(), "");
+		
+		String fileWithImports = concatFile(input, path, new ArrayList<String>());
+		return compile(fileWithImports);
+	}
+	
+	public static String concatFile(String givenInput, String path, List<String> handledImports) {
+		String totalInput = givenInput;
+		
+		// read the file
+		ANTLRInputStream input = new ANTLRInputStream(givenInput);
+		
+		ErrorListener listener = new ErrorListener();
+		Lexer lexer = new BurritoLexer(input);
+		lexer.removeErrorListeners();
+		lexer.addErrorListener(listener);
+
+		TokenStream tokens = new CommonTokenStream(lexer);
+		BurritoParser parser = new BurritoParser(tokens);
+		ParseTree result = parser.program();
+		parser.removeErrorListeners();
+		parser.addErrorListener(listener);
+		
+		Importer imp = new Importer(result);
+		
+		// for all the imports
+		for (int i = imp.getImports().size() - 1; i >= 0; i--) {
+			if (!handledImports.contains(imp.getImports().get(i))) {
+				File newFile = new File(path, imp.getImports().get(i) + ".symbol");
+				String newInput = getStringFromFile(newFile);
+				List<String> newHandledImports = new ArrayList<String>();
+				newHandledImports.addAll(handledImports);
+				newHandledImports.addAll(imp.getImports());
+				totalInput = concatFile(newInput, path, newHandledImports) + totalInput; 
+			}
+		}
+		return totalInput;
+	}
+	
+	public static String getStringFromFile(File file) {
+		try {
+			return new Scanner(file, "UTF-8" ).useDelimiter("\\A").next();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 }
 

@@ -167,6 +167,39 @@ public class SprockellTest {
 		assertSanitized(output, result);
 	}
 	
+	@Test
+	public void simpleSwitch() {
+		String result = compileAndRunFile("SimpleSwitch");
+		String output = "";
+		int x = 2;
+		
+		switch (x) {
+			case 1:
+				output += 1;
+				break;
+			case 2:
+				output += 2;
+				break;
+			case 3: 
+				output += 3;
+				break;
+			default:
+				output += 0;
+				break;
+		}
+		
+		output += "btrue";
+		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized(output, result);
+	}
+	
+	@Test
+	public void importTest() {
+		// compile file with imports
+		String result = compileImportAndRun(new File(BASE_DIR, "Import" + EXT), 1);
+		System.out.println(result);
+	}
+	
 	/**
 	 * Utility functions
 	 */
@@ -182,6 +215,7 @@ public class SprockellTest {
 	public static String compileAndRunFile(String filename) {
 		return compileAndRunFile(filename, 1);
 	}
+	
 	
 	public static String compileAndRunFile(String filename, int cores) {
 		try {
@@ -200,7 +234,46 @@ public class SprockellTest {
 	
 	public static String compileAndRun(ANTLRInputStream input, int cores) {
 		Program prog = Sprockell.compile(input);
+		//System.out.println(prog.prettyString(0, true));
 		int file = 5;
+		
+		if (prog == null) {
+			System.out.println("There were errors");
+			return null;
+		}
+	
+		try {
+			prog.writeToSir(5 + ".sir");
+			
+			Runtime rt = Runtime.getRuntime();
+			Process buildPr = rt.exec("bobe.exe " + cores);
+			buildPr.waitFor();
+
+			InputStream is = buildPr.getInputStream();
+			
+			Scanner s = new Scanner(is).useDelimiter("\\A");
+		    return s.hasNext() ? s.next() : "";
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			System.out.println("File not found");
+			return null;
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("IO Exception");
+			return null;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			System.out.println("We got interrupted");
+			return null;
+		} catch (NoSuchElementException e) {
+			e.printStackTrace();
+			System.out.println("Stream was empty");
+			return null;
+		}	
+	}
+	
+	public static String compileImportAndRun(File file, int cores) {
+		Program prog = Sprockell.compileImport(file);
 		
 		if (prog == null) {
 			System.out.println("There were errors");

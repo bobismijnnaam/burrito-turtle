@@ -2,27 +2,29 @@ grammar Burrito;
 
 import BurritoVocab; 
 
-program: (func | decl)*; 
+program: (func | decl | imp)*;
 	
 decl: type ID ASS expr SEMI;
+
+imp: IMPORT PATH SEMI;
 	
 func: sig stat* END;
 sig: type ID LPAR (arg (COMMA arg)*)? RPAR;
 arg: type ID;		
 
-stat: type ID ASS expr SEMI						#typeAssignStat
-	| target ASS expr SEMI						#assStat
-	| target PLUS ASS expr SEMI					#plusAssStat
-	| target MIN ASS expr SEMI					#minAssStat
-	| target MUL ASS expr SEMI					#mulAssStat
-	| target DIV ASS expr SEMI					#divAssStat
-	| expr IF block (ELSE block)? END			#ifStat
-	| expr WHILE block END						#whileStat
-	| type ID SEMI								#typeStat
-	| expr? IO newlines SEMI					#outStat
-	| RETURN expr? SEMI							#returnStat
-	| expr SEMI									#exprStat
-	| ID IF (NUM block)* (DEFAULT block)? END	#switchStat
+stat: type ID ASS expr SEMI										#typeAssignStat
+	| target ASS expr SEMI										#assStat
+	| target PLUS ASS expr SEMI									#plusAssStat
+	| target MIN ASS expr SEMI									#minAssStat
+	| target MUL ASS expr SEMI									#mulAssStat
+	| target DIV ASS expr SEMI									#divAssStat
+	| expr IF block (ELSE block)? END							#ifStat
+	| expr WHILE block END										#whileStat
+	| type ID SEMI												#typeStat
+	| expr? IO newlines SEMI									#outStat
+	| RETURN expr? SEMI											#returnStat
+	| expr SEMI													#exprStat
+	| '<' expr '>' (litExpr COLON block)* (DEFAULT block)? END	#switchStat
 	;
 
 block: stat*;
@@ -51,13 +53,16 @@ expr: NOT expr								#notExpr
 	| expr XOR expr							#xorExpr
 	| LPAR expr RPAR						#parExpr
 	| ID									#idExpr
-	| NUM									#numExpr
-	| CHARACTER								#characterExpr
-	| TRUE									#trueExpr
-	| FALSE 								#falseExpr
+	| litExpr								#literalExpr
 	| MIN expr								#negExpr
 	| ID LPAR (expr (COMMA expr)*)? RPAR	#funcExpr
 	| ID (LBRA expr RBRA)+					#arrayExpr
+	;
+	
+litExpr: NUM								#numExpr
+	| CHARACTER								#characterExpr
+	| TRUE									#trueExpr
+	| FALSE 								#falseExpr
 	;
 
 type: INT					#intType 
