@@ -51,7 +51,11 @@ import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.SigContext;
+<<<<<<< HEAD
 import lang.BurritoParser.StartStatContext;
+=======
+import lang.BurritoParser.SwitchStatContext;
+>>>>>>> c23330544d34b8f623f054acb9d2bb205aba191e
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
@@ -647,6 +651,13 @@ public class Checker extends BurritoBaseListener {
 		checkType(ctx, new Type.Lock());
 
 		setOffset(ctx, scope.offset(ctx.ID().getText()));
+		
+	}
+	
+	// SWITCH
+	@Override
+	public void exitSwitchStat(SwitchStatContext ctx) {
+		
 	}
 	
 	// BLOCK THINGY -------------------------------

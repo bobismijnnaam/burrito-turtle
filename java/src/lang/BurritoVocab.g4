@@ -26,6 +26,7 @@ NOT: '~';
 
 ASS: '=';
 ELSE: '!';
+DEFAULT: '!!';
 IF: '?';
 WHILE: '@';
 IO: '|';
