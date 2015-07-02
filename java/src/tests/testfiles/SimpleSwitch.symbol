@@ -1,4 +1,4 @@
-int program()
+void program()
 	int x = 2;
 	>> Switch int test
 	returnIf123(x)|;
@@ -11,7 +11,7 @@ int program()
 	bool b = true;
 	switchBool(b)|;
 	
-	<- 0;
+	<-;
 .
 
 int returnIf123(int x) 

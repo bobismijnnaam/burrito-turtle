@@ -1,4 +1,4 @@
-int program()
+void program()
 	int a = 4;
 	int b = 5;
 	a|;
@@ -7,5 +7,5 @@ int program()
 	b|\\\;
 	0|;
 	
-	<- 0;
+	<-;
 .

@@ -15,7 +15,7 @@ public class Scope {
 		public String id;
 	}
 	
-	/** Current size of this scope (in bytes). 
+	/** Current size of this scope (in words?)
 	 * Used to calculate offsets of newly declared variables. */
 	private int size;
 	private int globalSize;
@@ -35,6 +35,7 @@ public class Scope {
 	private Stack<Map<String, Reach>> reachesStack = new Stack<Map<String, Reach>>();
 	
 	private boolean recordingArgs;
+	private int sprockellCounter = 0;
 	
 	/**
 	 * Pops the previous scope state off the stack, restoring previous sizes, type mappings, etc.
@@ -95,25 +96,23 @@ public class Scope {
 		return result;
 	}
 	
-	// TODO: Deprecated!
-//	public boolean put(String id, Type type, int size) {
-//		boolean result = !this.types.containsKey(id);
-//		if (result) {
-//			this.types.put(id, type);
-//			this.offsets.put(id, this.size);
-//			this.size += size;
-//			this.reaches.put(id, Local);
-//		}
-//		return result;
-//	}
-	
-	public String putFunc(String id, String label, Type returnType, Type... args) {
+	public String putFunc(String id, String label, Type returnType, boolean parallel, Type... args) {
 		if (!functions.containsKey(id)) functions.put(id, new Function(id, returnType));
 		Function func = functions.get(id);
 		if (!func.returnType.equals(returnType)) return "A function can only have one return type"
 				+ " across overloads";
 
-		return func.registerOverload(args, label);
+		String ret;
+		if (id.equals(Generator.MAINMETHOD) && args.length == 0) {
+			ret = func.registerOverload(args, label, parallel, 0);
+		} else if (parallel) {
+			ret = func.registerOverload(args, label, parallel, 1 + sprockellCounter);
+			sprockellCounter++;
+		} else {
+			ret = func.registerOverload(args, label, parallel, 0);
+		}
+		
+		return ret;
 	}
 	
 	public boolean startArgRecording() {
@@ -195,5 +194,17 @@ public class Scope {
 	
 	public Reach reach(String id) {
 		return this.reaches.get(id);
+	}
+	
+	public int getGlobalSize() {
+		return globalSize;
+	}
+	
+	/**
+	 * This is INCLUDING a sprockell for program() (the main thread!)
+	 * @return
+	 */
+	public int getSprockells() {
+		return sprockellCounter + 1;
 	}
 }

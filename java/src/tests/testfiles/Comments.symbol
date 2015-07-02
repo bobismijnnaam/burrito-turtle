@@ -1,4 +1,4 @@
-int program()
+void program()
 	>> A comment
 	int a = 3; 
 	>> Another comment
@@ -11,5 +11,5 @@ int program()
 	int d {See?} = 5; 
 	>> noo worries!
 	a*b*c*d|;
-	<- 0;
+	<-;
 .

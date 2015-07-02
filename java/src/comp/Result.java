@@ -15,6 +15,9 @@ public class Result {
 	private final ParseTreeProperty<Function.Overload> functions = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Integer> stackSizes = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Reach> reaches = new ParseTreeProperty<>();
+	
+	private int globalSize;
+	private int sprockells;
 
 	/** Adds an association from parse tree node to the flow graph entry. */
 	public void setEntry(ParseTree node, ParserRuleContext entry) {
@@ -73,5 +76,29 @@ public class Result {
 	
 	public Reach getReach(ParseTree node) {
 		return this.reaches.get(node);
+	}
+	
+	/**
+	 * @return The address where the sprockell segmenst start. It starts after the global values, and after the important value block
+	 * (Which, as you can see, is the size of 2 words - an allocator lock and an IO lock)
+	 */
+	public int getSprockellSegment() {
+		return globalSize + 2;
+	}
+	
+	public int getGlobalSize() {
+		return this.globalSize;
+	}
+	
+	public void setGlobalSize(int globalSize) {
+		this.globalSize = globalSize;
+	}
+	
+	public void setSprockells(int sprockells) {
+		this.sprockells = sprockells;
+	}
+	
+	public int minimumSprockells() {
+		return sprockells;
 	}
 }

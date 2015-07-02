@@ -1,18 +1,21 @@
 int gA = 0;
 
->> TODO: Use locks here
-int program()
+void program()
 	int i = 0; i < 5 @
 		gA+;
 		gA+;
 		gA+;
 		gA+;
+		
 		gA-;
 		gA-;
 		gA-;
 		gA-;
+		
 		i++;
 	.
+
 	gA|\;
-	<- 0;
+	
+	<-;
 .

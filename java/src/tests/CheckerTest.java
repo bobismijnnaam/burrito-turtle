@@ -28,12 +28,14 @@ public class CheckerTest {
 	
 	@Test
 	public void functionTests() {
-		String testProgram = "int add(int a, int b) <- a + b;. int program(bool x, bool y) int c = 3; int d = 4; <- add(c, d); . ";
+		String testProgram = "int add(int a, int b) <- a + b;. void program(bool x, bool y) int c = 3; int d = 4; <- ; . ";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 		
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			//System.out.println(result.getChild(1).getChild(3).getChild(1).getText());
 			//System.out.println(checkResult.getType(result.getChild(1).getChild(3).getChild(1)));
 		} catch (ParseException e) {
@@ -57,12 +59,14 @@ public class CheckerTest {
 	@Test
 	public void basicTests() {
 		// int assignment
-		String testProgram = "int program() int i = 0; .";
+		String testProgram = "void program() int i = 0; <-; .";
 		ParseTree result = parse(testProgram);
+		Collector collector = new Collector();
 		Checker checker = new Checker();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(1)).getClass());
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(3)).getClass());
 		} catch (ParseException e) {
@@ -71,12 +75,14 @@ public class CheckerTest {
 		assertEquals(false, checker.hasErrors());
 		
 		// int assignment but not inferred has 1 error
-		testProgram = "int program() i = 0; .";
+		testProgram = "void program() i = 0; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 		
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(3)).getClass());
 		} catch (ParseException e) {
@@ -85,12 +91,14 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// try to assign bool to int
-		testProgram = "int program() int i = false; .";
+		testProgram = "void program() int i = false; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 		
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
 			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(0).getChild(3)).getClass());
 		} catch (ParseException e) {
@@ -103,11 +111,13 @@ public class CheckerTest {
 	@Test
 	public void arrayTests() { 
 		// correct array useage, type int and assign correct type to elem
-		String testProgram = "int program() bool[6] i; i[4] = true; .";
+		String testProgram = "void program() bool[6] i; i[4] = true; <-; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			
 			assertEquals(new Type.Array(new Type.Bool(), 6).getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(0)).getClass());
 			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
@@ -119,11 +129,13 @@ public class CheckerTest {
 		assertEquals(false, checker.hasErrors());
 		
 		// assign wrong type to elem
-		testProgram = "int program() int[6] i; i[4] = true; .";
+		testProgram = "void program() int[6] i; i[4] = true; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(1).getChild(0)).getClass());
 			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(1).getChild(2)).getClass());
@@ -134,11 +146,13 @@ public class CheckerTest {
 		assertEquals(true, checker.hasErrors());
 		
 		// array not initialized
-		testProgram = "int program() i[1] = true; .";
+		testProgram = "void program() i[1] = true; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 		} catch (ParseException e) {
 			
 		}
@@ -149,8 +163,10 @@ public class CheckerTest {
 		testProgram = "int program() bool[5] i; i[false] = true; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 		} catch (ParseException e) {
 		}
 		
@@ -161,8 +177,10 @@ public class CheckerTest {
 		//testProgram = "bool[7][8] x; x[0][0] = 0;";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 		} catch (ParseException e) {
 		}
 		
@@ -170,13 +188,15 @@ public class CheckerTest {
 	}
 	
 	@Test public void multiDimArrayTest() {
-		String testProgram = "int program() bool[3][2][6][2][3] i; int x = 0; .";
+		String testProgram = "void program() bool[3][2][6][2][3] i; int x = 0; <-; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
-			assertEquals(216, checkResult.getOffset(result.getChild(0).getChild(2).getChild(1)));
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
+			assertEquals(216 + 1, checkResult.getOffset(result.getChild(0).getChild(2).getChild(1)));
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
@@ -188,12 +208,14 @@ public class CheckerTest {
 	
 	@Test
 	public void incExprTest() {
-		String testProgram = "int program() int x = 0; x+++++++++; .";
+		String testProgram = "void program() int x = 0; x+++++++++; <- ;.";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -204,12 +226,14 @@ public class CheckerTest {
 	
 	@Test
 	public void decExprTest() {
-		String testProgram = "int program() int x = 0; x----------; .";
+		String testProgram = "void program() int x = 0; x----------; <-; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -220,7 +244,7 @@ public class CheckerTest {
 	
 	@Test
 	public void switchTest() {
-		String testProgram = "int program() int x = 0; <x> 1: x = 3; . <- 0;.";
+		String testProgram = "void program() int x = 0; <x> 1: x = 3; . <-;.";
 		ParseTree result = parse(testProgram);
 		Collector funCol = new Collector();
 		
@@ -249,7 +273,7 @@ public class CheckerTest {
 	
 	@Test
 	public void imporTest() {
-		String testProgram = "pls ruben; int program() .";
+		String testProgram = "pls \"ruben\"; void program() <-; .";
 		ParseTree result = parse(testProgram);
 		Collector funCol = new Collector();
 		Checker checker = new Checker();
@@ -266,12 +290,14 @@ public class CheckerTest {
 	
 	@Test
 	public void operatorAssignTests() {
-		String testProgram = "int program() int x = 0; x += 3; .";
+		String testProgram = "void program() int x = 0; x += 3; <-; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -279,12 +305,14 @@ public class CheckerTest {
 		
 		assertEquals(false, checker.hasErrors());
 		
-		testProgram = "int program() int x = 0; x -= 3; .";
+		testProgram = "void program() int x = 0; x -= 3; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -292,12 +320,14 @@ public class CheckerTest {
 		
 		assertEquals(false, checker.hasErrors());
 		
-		testProgram = "int program() int x = 0; x /= 3; .";
+		testProgram = "void program() int x = 0; x /= 3; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -305,12 +335,14 @@ public class CheckerTest {
 		
 		assertEquals(false, checker.hasErrors());
 		
-		testProgram = "int program() int x = 0; x *= 3; .";
+		testProgram = "void program() int x = 0; x *= 3; <-; .";
 		result = parse(testProgram);
 		checker = new Checker();
+		collector = new Collector();
 
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -321,11 +353,13 @@ public class CheckerTest {
 	
 	@Test
 	public void charTest() {
-		String testProgram = "int program() char a = 'a'; .";
+		String testProgram = "void program() char a = 'a'; <-; .";
 		ParseTree result = parse(testProgram);
 		Checker checker = new Checker();
+		Collector collector = new Collector();
 		try {
-			Result checkResult = checker.check(result);
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
 			assertEquals(new Type.Char().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(1)).getClass());
 			assertEquals(new Type.Char().getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(3)).getClass());
 		} catch (ParseException e) {

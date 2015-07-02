@@ -7,8 +7,13 @@ lexer grammar BurritoVocab;
 RETURN: '<-';
 DEFAULT: ANY COLON;
 ANY : 'any';
+START: '->';
+LOCK: 'lock';
+UNLOCK: 'unlock';
+LENGTH: 'len';
+
 PLUS: '+';
-MIN: '-';
+MIN: '-';  
 MUL: '*';
 DIV: '/';
 MOD: '%';
@@ -46,9 +51,12 @@ XOR: '^';
 INT: 'int';
 BOOL: 'bool';
 CHAR: 'char';
+LOCKT: 'Lock';
+VOID: 'void';
 AUTO: '$';
-
-PTR: '_';
+LOCAL: '&';
+GLOBAL: '*';
+DEREF: '_';
 
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';

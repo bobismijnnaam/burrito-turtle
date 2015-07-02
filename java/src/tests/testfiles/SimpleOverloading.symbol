@@ -1,11 +1,13 @@
-int program()
+void program()
 	add(1, 2)|\;
 	add(true, false)|\;
 	add(2, 3, 5)|\;
 	
-	<- 0;
+	<-;
 .
+
 int add(int l, int r) <- add(l, r, 1); .
+
 int add(bool l, bool r)
 	l || r ?
 		<- 1;
@@ -15,4 +17,5 @@ int add(bool l, bool r)
 	
 	<- 0;
 .
+
 int add(int l, int r, int times) <- l * times + r * times; .

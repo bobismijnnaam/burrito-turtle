@@ -1,9 +1,10 @@
 pls "rubenonrails/Llama";
 pls "rubenonrails/Math";
 
-int program()
+void program()
 	abs(-4)|\\;
 	pow(2, 4)|\\;
 	even(2)|\\;
-	<- showLlama();
+	showLlama();
+	<- ;
 .

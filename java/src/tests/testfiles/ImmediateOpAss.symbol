@@ -1,4 +1,4 @@
-int program()
+void program()
 	int i = 0;
 	i += 4;
 	i|;
@@ -8,5 +8,5 @@ int program()
 	i|;
 	i -= 4;
 	i|;
-	<- 0;
+	<-;
 .

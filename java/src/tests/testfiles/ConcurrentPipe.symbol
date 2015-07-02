@@ -1,0 +1,32 @@
+void program()
+	-> printer1;
+	-> printer2;
+	-> printer3;
+	
+	<-;
+.
+
+void~ printer1()
+	int i = 0; i < 5 @
+		11111|~\;
+		i+;
+	.
+	
+	<-;
+.
+void~ printer2()
+	int i = 0; i < 5 @
+		22222|~\;
+		i+;
+	.
+	
+	<-;
+.
+void~ printer3()
+	int i = 0; i < 5 @
+		33333|~\;
+		i+;
+	.
+	
+	<-;
+.

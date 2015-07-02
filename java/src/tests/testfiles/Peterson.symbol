@@ -1,0 +1,86 @@
+bool[2] flag;
+int turn = 0;
+
+int counter = 0;
+int length = 300;
+
+bool worker0done = false;
+bool worker1done = false;
+
+void enterCriticalSection0()
+	flag[0] = true;
+	turn = 1;
+	flag[1] && turn == 1 @ .
+	
+	>> 0 got access!
+
+	<-;
+.
+
+void enterCriticalSection1()
+	flag[1] = true;
+	turn = 0;
+	flag[0] && turn == 0 @ .
+	
+	>> 1 got access!
+	
+	<-;
+.
+
+void~ worker0()
+	int i = 0; i < length @
+		enterCriticalSection0();
+		
+		counter+;
+		
+		flag[0] = false;
+		
+		enterCriticalSection0();
+		
+		counter-;
+		
+		flag[0] = false;
+		
+		i++;
+	.
+	
+	worker0done = true;
+	
+	<-;
+.
+
+void~ worker1()
+	int i = 0; i < length @
+		enterCriticalSection1();
+		
+		counter-;
+		
+		flag[1] = false;
+		
+		enterCriticalSection1();
+		
+		counter+;
+		
+		flag[1] = false;
+	
+		i++;
+	.
+	
+	worker1done = true;
+	
+	<-;
+.
+
+void program()
+	flag[0] = false;
+	flag[1] = false;
+	
+	-> worker0;
+	-> worker1;
+	
+	~(worker0done && worker1done) @.
+	
+	counter|\;
+
+	<-;
+.

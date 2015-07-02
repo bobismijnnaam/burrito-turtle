@@ -47,6 +47,9 @@ public class Program {
 	 * @param args
 	 */
 	public void emit(String label, Op opCode, Operand... args) {
+		if (label == null) {
+			System.out.println("Null label! " + opCode + " " + args);
+		}
 		putLabel(label, instr.size());
 		emit(opCode, args);
 	}
@@ -130,9 +133,11 @@ public class Program {
 		for (int i = 0; i < instr.size(); i++) {
 			if (!checkArgLength(instr.get(i))) {
 				System.out.println("Arg length does not match [line " + i + "]");
+				System.out.println("The line: " + instr.get(i).toString());
 				return false;
 			} else if (!checkArgTypes(instr.get(i))) {
 				System.out.println("Argument types do not match [line " + i + "]");
+				System.out.println("The line: " + instr.get(i).toString());
 				return false;
 			}
 		}
@@ -151,13 +156,6 @@ public class Program {
 	
 	public void writeToFile(String fileName, int cores) throws FileNotFoundException {
 		PrintWriter writer = new PrintWriter(fileName);
-		
-//		writer.println("import Sprockell.System\n");
-//		writer.println("prog = [");
-//		
-//		writer.println(prettyString(2, false) + "\n\t\t]");
-//		
-//		writer.println("main = run " + cores + " prog");
 		
 		writer.println(toHaskell(cores));
 		
