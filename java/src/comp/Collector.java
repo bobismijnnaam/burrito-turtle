@@ -13,6 +13,7 @@ import lang.BurritoParser.IntTypeContext;
 import lang.BurritoParser.LockTypeContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.SigContext;
+import lang.BurritoParser.VoidTypeContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
@@ -30,14 +31,6 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	// TODO: Return statement checking (can probably be done with that flow thingy)
 	// Or maybe another visitor, or maybe this one. Each branch should just eventually reach a return statement
 	// That actually sounds completely doable.
-	// TODO: Make sure when an array is returned it is properly saved on the stack and stuff
-	// TODO: void return type
-	// TODO: When comparing two overloads if they have the same arguments, don't forget to check
-	// if two array arguments are the same size as well. This means, after doing equals(), you have
-	// to upcast them to array and check their sizes!
-	// TODO: Make functions type aware (when doing a function with return type int[2], make it leave 
-	// two integers on the stack, and act accordingly after the expression has evaluated (popping them off
-	// the stack if not needed anymore, etc.)
 	private Scope scope;
 	private ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	private List<String> errors = new ArrayList<>();
@@ -138,6 +131,12 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	}
 	
 	@Override
+	public Integer visitVoidType(VoidTypeContext ctx) {
+		setType(ctx, new Type.Void());
+		return 0;
+	}
+	
+	@Override
 	public Integer visitLockType(LockTypeContext ctx) {
 		setType(ctx, new Type.Lock());
 		return 0;
@@ -171,9 +170,7 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	/**
 	 * Utility functions below here
 	 */
-	// TODO: Maybe move all this functionality into a SymbolVisitor class?
-	// So we can have uniform error reporting in anything that visits/traverses a tree.
-	
+
 	/** Indicates if any errors were encountered in this tree listener. */
 	public boolean hasErrors() {
 		return !getErrors().isEmpty();

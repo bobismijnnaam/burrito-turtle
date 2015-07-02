@@ -2,7 +2,7 @@ int add(int x, int y)
 	<- x + y;
 .
 
-int program()
+void program()
 	int x = 0;
 	int[100] z;
 	
@@ -12,5 +12,5 @@ int program()
 		x = add(x, 1);
 	.
 	
-	<- 0;
+	<-;
 .

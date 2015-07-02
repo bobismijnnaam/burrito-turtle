@@ -8,7 +8,9 @@ decl: type ID (ASS expr)? SEMI;
 	
 func: sig stat* END;
 sig: type NOT? ID LPAR (arg (COMMA arg)*)? RPAR;
-arg: type ID;
+arg: type ID			#plainArg
+	| type LBRA RBRA	#anyArrayArg
+	;
 
 stat: type ID ASS expr SEMI					#typeAssignStat
 	| target ASS expr SEMI					#assStat
@@ -19,7 +21,7 @@ stat: type ID ASS expr SEMI					#typeAssignStat
 	| expr IF block (ELSE block)? END		#ifStat
 	| expr WHILE block END					#whileStat
 	| type ID SEMI							#typeStat
-	| expr? IO newlines SEMI				#outStat
+	| expr? IO NOT? newlines SEMI			#outStat
 	| RETURN expr? SEMI						#returnStat
 	| expr SEMI								#exprStat
 	| START ID SEMI							#startStat
@@ -60,12 +62,14 @@ expr: NOT expr								#notExpr
 	| MIN expr								#negExpr
 	| ID LPAR (expr (COMMA expr)*)? RPAR	#funcExpr
 	| ID (LBRA expr RBRA)+					#arrayExpr
+	| LENGTH LPAR ID RPAR					#lenExpr
 	;
 
 type: INT					#intType 
 	| BOOL 					#boolType
 	| CHAR					#charType
 	| LOCKT					#lockType
+	| VOID					#voidType	
 	| type LBRA NUM RBRA	#arrayType  
 	;
 	

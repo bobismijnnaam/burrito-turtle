@@ -22,6 +22,28 @@ public class SprockellTest {
 	private final static String EXT = ".symbol";
 	
 	@Test
+	public void simpleLen() {
+		String result = compileAndRunFile("SimpleLen", 1);
+		assertNotNull("Compiling or executing went wrong", result);
+		assertSanitized("4\n5\n6\n8\n", result);
+	}
+	
+	@Test
+	public void concurrentPipe() {
+		String result = compileAndRunFile("ConcurrentPipe", 4);
+		assertNotNull("Compiling or executing went wrong", result);
+		
+		result = result.replaceAll("\r\n", "\n");
+		int count1 = (result.length() - result.replaceAll("11111\n", "").length()) / 6;
+		int count2 = (result.length() - result.replaceAll("22222\n", "").length()) / 6;
+		int count3 = (result.length() - result.replaceAll("33333\n", "").length()) / 6;
+		
+		assertEquals(count1, 5);
+		assertEquals(count2, 5);
+		assertEquals(count3, 5);
+	}
+	
+	@Test
 	public void simpleLocks() {
 		String result = compileAndRunFile("SimpleLocks", 5);
 		String output = "";
@@ -146,10 +168,6 @@ public class SprockellTest {
 	@Test
 	public void simpleDecExpr() {
 		String result = compileAndRunFile("SimpleDecExpr");
-//		int z = 30;
-//		for (int i = 0; i < 11; i++) {
-//			z--;
-//		}
 		assertNotNull("Compiling or executing went wrong", result);
 		assertEquals("19", result);
 	}
@@ -223,7 +241,7 @@ public class SprockellTest {
 			prog.writeToSir(5 + ".sir");
 			
 			Runtime rt = Runtime.getRuntime();
-			Process buildPr = rt.exec("bobe.exe " + cores);
+			Process buildPr = rt.exec("bobe.exe " + cores); // rt.exec("ghc -i/sprockell/src -e main test.hs"
 			buildPr.waitFor();
 
 			InputStream is = buildPr.getInputStream();

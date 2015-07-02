@@ -1,36 +1,40 @@
 Lock out;
 
-int program()
+void program()
 	-> worker1;
 	-> worker2;
 	-> worker3;
 	-> worker4;
 	
-	<- 0;
+	<-;
 .
 
-int~ worker1()
-	<- outputStuff();
+void~ worker1()
+	outputStuff();
+	<-;
 .
 
-int~ worker2()
-	<- outputStuff();
+void~ worker2()
+	outputStuff();
+	<-;
 .
 
-int~ worker3()
-	<- outputStuff();
+void~ worker3()
+	outputStuff();
+	<-;
 .
 
-int~ worker4()
-	<- outputStuff();
+void~ worker4()
+	outputStuff();
+	<-;
 .
 
-int outputStuff()
+void outputStuff()
 	lock out;
 	
 	12345|\;
 	
 	unlock out;
 	
-	<- 0;
+	<-;
 .

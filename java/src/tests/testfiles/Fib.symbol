@@ -7,12 +7,12 @@ int fib(int n)
 
 bool even(int n) <- n % two == 0; .
 
-int program()
+void program()
 	int i = 0; i < max @
 		even(i) ? fib(i)|\; .
 		i+;
 	.
-	<- 0;
+	<-;
 .
 
 int zero = 0;

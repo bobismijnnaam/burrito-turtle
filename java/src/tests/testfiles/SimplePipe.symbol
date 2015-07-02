@@ -1,4 +1,4 @@
-int program()
+void program()
 	12345|; 
 	0|; 
 	987654321|; 
@@ -8,5 +8,5 @@ int program()
 	true|; 
 	false|;
 	
-	<- 0;
+	<-;
 .

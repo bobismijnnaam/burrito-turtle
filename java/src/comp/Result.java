@@ -78,8 +78,12 @@ public class Result {
 		return this.reaches.get(node);
 	}
 	
+	/**
+	 * @return The address where the sprockell segmenst start. It starts after the global values, and after the important value block
+	 * (Which, as you can see, is the size of 2 words - an allocator lock and an IO lock)
+	 */
 	public int getSprockellSegment() {
-		return globalSize + 1;
+		return globalSize + 2;
 	}
 	
 	public int getGlobalSize() {

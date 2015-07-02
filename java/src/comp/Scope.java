@@ -105,9 +105,11 @@ public class Scope {
 		String ret;
 		if (id.equals(Generator.MAINMETHOD) && args.length == 0) {
 			ret = func.registerOverload(args, label, parallel, 0);
-		} else {
+		} else if (parallel) {
 			ret = func.registerOverload(args, label, parallel, 1 + sprockellCounter);
 			sprockellCounter++;
+		} else {
+			ret = func.registerOverload(args, label, parallel, 0);
 		}
 		
 		return ret;

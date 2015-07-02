@@ -1,4 +1,4 @@
-int program()
+void program()
 	>> Multi Dimensional Array test!
 	int[2][2][2][2] x;
 	int a = 0;
@@ -24,5 +24,5 @@ int program()
 		a = a + 1;
 	.
 	
-	<- 0;
+	<-;
 .

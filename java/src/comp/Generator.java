@@ -34,6 +34,7 @@ import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IncExprContext;
+import lang.BurritoParser.LenExprContext;
 import lang.BurritoParser.LockStatContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
@@ -73,7 +74,6 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
-
 import comp.Type.Array;
 
 
@@ -125,7 +125,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return generate(tree, checkResult, 1);
 	}
 
-	// TODO: Initialize static variables
+	// TODO: Make a consumer/producer program
+	// TODO: Make a banking system
 	@Override
 	public List<Instr> visitProgram(ProgramContext ctx) {
 		endLabel = Program.mkLbl(ctx, "done");
@@ -150,7 +151,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// First construct the "fake" stack for program()
 		prog.emit(Const, new Value(endLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE)); // Return address
-		// No parameters, so nothing to push here. Maybe a TODO?
 		// We push a zero here to let the ARP point to the FIRST byte after the last parameter
 		// (or the return value of there were no parameters)
 		prog.emit(Push, zero);
@@ -181,9 +181,26 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			return null;
 		}
 		
+		Type type = checkResult.getType(ctx.type());
+		
+		// Initialize id part of lock to -1
+		if (type instanceof Type.Lock) {
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			prog.emit(Const, new Value(-1), new Reg(RegD));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
+		}
+		
+		if (type instanceof Type.Array) {
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			prog.emit(Const, new Value(((Type.Array) type).length()), new Reg(RegD));
+			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
+		}
+		
 		if (ctx.expr() != null) {
 			visit(ctx.expr());
 			// Value is now in E
+			// TODO: What if type is object or array?
 			
 			// Get offset
 			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
@@ -259,7 +276,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	// TODO: Replace with storeAI (store reg => reg, offset)
 	@Override
 	public List<Instr> visitTypeAssignStat(TypeAssignStatContext ctx) {
 		visit(ctx.expr());
@@ -273,6 +289,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			for (int i = 0; i < type.size(); i++) {
 				prog.emit(Push, new Reg(Zero));
 			}
+			
 			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
 			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
 			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
@@ -281,7 +298,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	// TODO: Replace with storeAI (store reg => reg, offset)
 	@Override
 	public List<Instr> visitAssStat(AssStatContext ctx) {
 		visit(ctx.target());
@@ -308,17 +324,24 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitTypeStat(TypeStatContext ctx) {
 		visit(ctx.type());
 		
-		if (checkResult.getReach(ctx.ID()) != Local) System.out.println("[Generator] This can;t be global, has to be local");
+		if (checkResult.getReach(ctx.ID()) != Local) System.out.println("[Generator] This can't be global, has to be local");
 
 		Type type = checkResult.getType(ctx.ID());
 		for (int i = 0; i < type.size(); i++) {
 			prog.emit(Push, new Reg(Zero));
 		}
 		
+		if (type instanceof Type.Array) {
+			Type.Array arr = (Type.Array) type;
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			prog.emit(Const, new Value(arr.length()), new Reg(RegD));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+			prog.emit(Store, new Reg(RegD), new MemAddr(RegE));
+		}
+		
 		return null;
 	}
 	
-	// TODO: Do reach magic here
 	@Override
 	public List<Instr> visitArrayTarget(ArrayTargetContext ctx) {
 		for (ExprContext expr : ctx.expr()) {
@@ -341,13 +364,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// In RegC staat nu offset relatief in array
 		
 		// Get offset from ctx.ID() in RegB
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
-		// RegB + RegE -> RegE
+		// The + 1 is to account for the integer at the array address, which contains the length of the array
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
 		
 		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
 		return null;
 	}
-	//prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
 	
 	@Override
 	public List<Instr> visitIdTarget(IdTargetContext ctx) {
@@ -440,7 +462,15 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Receive, workReg);
 		prog.emit(Compute, new Operator(Equal), workReg, new Reg(SPID), workReg);
 		prog.emit(Branch, workReg, new Target(nothingWrongLabel));
-		// TODO: Emit faulty unlock code
+
+		// TODO: Test if spid recoginition works
+		
+		// Write ~! to stdout to indicate wrong lock opening
+		prog.emit(Const, new Value(126), workReg);
+		prog.emit(Write, workReg, stdio);
+		prog.emit(Const, new Value(33), workReg);
+		prog.emit(Write, workReg, stdio);
+		
 		prog.emit(nothingWrongLabel, Const, new Value(-1), workReg);
 		prog.emit(Write, workReg, new MemAddr(RegD));
 		prog.emit(Write, new Reg(Zero), new MemAddr(RegE));
@@ -465,12 +495,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	// TODO: Something with stack length here
-	// The idea is that we switch from the premise of "after expr RegE will contain the result"
-	// to "after expr the stack will point to the integer after the last integer of the result"
-	// The type (and thus the size) is known at compile time so this should be possible
-	// Also once you do that using objects becomes far more likely
-	// And pass-by-value arrays ^^
 	@Override
 	public List<Instr> visitArrayExpr(ArrayExprContext ctx) {
 		for (ExprContext expr : ctx.expr()) {
@@ -491,7 +515,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		// Waarde mem[arp - offset]
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
+		// The +1 is to account for the length integer that resides at the arrays' address
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
 		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
 		
 		Reach reach = checkResult.getReach(ctx.ID());
@@ -528,6 +553,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		} else if (reach == Global) {
 			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
 		}
+		
+		prog.emit(Compute, new Operator(Add), new Reg(Zero), new Reg(RegD), new Reg(RegE));
 
 		return null;
 	}
@@ -705,7 +732,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Const, new Value(returnLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE));
 		
-		// TODO: Make this size aware (e.g. with arrays, push more than one if needed.
+		// TODO: What if an expr is an obj or array?
 		// Don't forget to also support this in the checker!
 		for (ExprContext expr : ctx.expr()) {
 			visit(expr);
@@ -744,7 +771,22 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	// TODO: Make this size-aware as well
+	@Override
+	public List<Instr> visitLenExpr(LenExprContext ctx) {
+		Reach reach = checkResult.getReach(ctx.ID());
+		
+		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+		} else if (reach == Global) {
+			prog.emit(Read, new MemAddr(RegE));
+			prog.emit(Receive, new Reg(RegE));
+		}
+		
+		return null;
+	}
+	
 	@Override
 	public List<Instr> visitReturnStat(ReturnStatContext ctx) {
 		if (ctx.expr() != null) {
@@ -780,8 +822,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		// Store the return value in the return value field if it's not main
-		// TODO: Do something with return value in case of main
-		if (ctx.expr() != null && func.func.id != MAINMETHOD) {
+		// TODO: What if return type is array or obj?
+		if (!(func.func.returnType instanceof Type.Void)) {
 			prog.emit(Const, new Value(6), new Reg(RegD)); // To skip over the return address field and the 5 registers
 			prog.emit(Compute,  new Operator(Add), new Reg(SP), new Reg(RegD), new Reg(RegD));
 			prog.emit(Store, new Reg(RegE), new MemAddr(RegD));
@@ -796,6 +838,17 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitOutStat(OutStatContext ctx) {
+		if (ctx.NOT() != null) {
+			String lockLabel = Program.mkLbl(ctx, "pipeopLockStdOut");
+			// Lock out operator
+			// stdout lock is in the important variable segment at the second position
+			prog.emit(Const, new Value(checkResult.getGlobalSize() + 1), new Reg(RegE));
+			prog.emit(lockLabel, TestAndSet, new MemAddr(RegE));
+			prog.emit(Receive, new Reg(RegD));
+			prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegD));
+			prog.emit(Branch, new Reg(RegD), new Target(lockLabel));
+		}
+		
 		if (ctx.expr() != null) {
 			visit(ctx.expr());
 		
@@ -863,8 +916,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					// Starting values
 					prog.emit(printIntLabel, Const, new Value(10), orderReg);
 					prog.emit(Const, new Value(0), countReg);
-					
-					// TODO: When ComputeI is actually used, replace stack usage here
 					
 					// Print minus if it's negative
 					prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
@@ -979,6 +1030,11 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Write, workReg, stdio);
 		}
 		
+		if (ctx.NOT() != null) {
+			prog.emit(Const, new Value(checkResult.getGlobalSize() + 1), new Reg(RegE));
+			prog.emit(Write, new Reg(Zero), new MemAddr(RegE));
+		}
+		
 		return null;
 	}
 	
@@ -1012,9 +1068,14 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			
 			// Start making the final thread stack etc. here
 			// First construct the "fake" stack for program()
+			prog.emit(Push, new Reg(Zero)); // Return address
+			prog.emit(Push, new Reg(Zero)); // RegA
+			prog.emit(Push, new Reg(Zero)); // RegB
+			prog.emit(Push, new Reg(Zero)); // RegC
+			prog.emit(Push, new Reg(Zero)); // RegD
+			prog.emit(Push, new Reg(Zero)); // RegE
 			prog.emit(Const, new Value(endLabel), new Reg(RegE));
 			prog.emit(Push, new Reg(RegE)); // Return address
-			// No parameters, so nothing to push here. Maybe a TODO?
 			// We push a zero here to let the ARP point to the FIRST byte after the last parameter
 			// (or the return value of there were no parameters)
 			prog.emit(Push, new Reg(Zero));

@@ -1,10 +1,7 @@
 int gA = 0;
-Lock num;
 
-int program()
+void program()
 	int i = 0; i < 5 @
-		lock num;
-		
 		gA+;
 		gA+;
 		gA+;
@@ -14,17 +11,11 @@ int program()
 		gA-;
 		gA-;
 		gA-;
-		
-		unlock num;
 		
 		i++;
 	.
 
-	lock num;
-	
 	gA|\;
 	
-	unlock num;
-	
-	<- 0;
+	<-;
 .

@@ -30,6 +30,7 @@ import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LenExprContext;
 import lang.BurritoParser.LockStatContext;
 import lang.BurritoParser.LockTypeContext;
 import lang.BurritoParser.LtExprContext;
@@ -40,8 +41,10 @@ import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulAssStatContext;
 import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
+import lang.BurritoParser.NotExprContext;
 import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.OrExprContext;
+import lang.BurritoParser.OutStatContext;
 import lang.BurritoParser.ParExprContext;
 import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
@@ -52,6 +55,7 @@ import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
 import lang.BurritoParser.TypeStatContext;
 import lang.BurritoParser.UnlockStatContext;
+import lang.BurritoParser.VoidTypeContext;
 import lang.BurritoParser.WhileStatContext;
 import lang.BurritoParser.XorExprContext;
 
@@ -106,11 +110,19 @@ public class Checker extends BurritoBaseListener {
 	public void exitDecl(DeclContext ctx) {
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
+
+		if (type instanceof Type.Array) {
+			((Type.Array) type).setOuter();
+		}
 		
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
-
+		
 		if (ctx.expr() != null) {
+			if (!type.assignable()) {
+				addError(ctx, "It is prohibited to assign a value to type " + type);
+			}
+			
 			setType(ctx.ID(), type);		
 			checkType(ctx.expr(), type);
 		}	
@@ -135,11 +147,18 @@ public class Checker extends BurritoBaseListener {
 			
 		}
 		
-		// TODO: Functin overload check sometimes null; checker breaks if not checked on null
-		//Will always succeed, since if we're in this phase it means that the Function phase succeeded
+		// Will always succeed, since if we're in this phase it means that the Function phase succeeded
 		Function.Overload overload = null;
 		if (scope.func(funcID) != null) {
 			overload = scope.func(funcID).getOverload(args);
+		} else {
+			addError(ctx, "Sanity check failed: function " + funcID + " not declared");
+		}
+		
+		if (funcID.equals(Generator.MAINMETHOD)) {
+			if (!(overload.func.returnType instanceof Type.Void)) {
+				addError(ctx, "program() method should have return type void, not type " + overload.func.returnType);
+			}
 		}
 		
 		// Push a scope, since we're going into function scope
@@ -185,7 +204,14 @@ public class Checker extends BurritoBaseListener {
 		// Otherwise, attach it to the return node
 		setFunction(ctx, func);
 		
-		checkType(ctx.expr(), func.func.returnType);
+		if (ctx.expr() == null) {
+			if (!(func.func.returnType instanceof Type.Void)) {
+				addError(ctx, "Return statement should contain a value since return type of this function is non-void");
+			}
+		} else {
+			checkType(ctx.expr(), func.func.returnType);
+		}
+		
 		// Set the current stack size so it can be unwound
 		setStackSize(ctx, scope.getCurrentStackSize());
 	};
@@ -208,18 +234,19 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	@Override
+	public void exitVoidType(VoidTypeContext ctx) {
+		setType(ctx, new Type.Char());
+	}
+	
+	@Override
 	public void exitLockType(LockTypeContext ctx) {
-		// TODO: Check if it's in global scope, if not, add an error or something
-//		addError(ctx, "Lock type only allowed in global scope");
+		setType(ctx, new Type.Lock());
 	}
 	
 	@Override
 	public void exitArrayType(ArrayTypeContext ctx) {
 		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
 		
-		// TODO: Though the third one was the cleanest, but leaving the alternatives here for future reference
-//		if (getType(ctx.type()).toString().equals("Array")) {
-//		if (getType(ctx.type()).equals((new Type.Array(null, 0)))) {
 		if (getType(ctx.type()) instanceof Type.Array) {
 			Type.Array innerArray = (Array) getType(ctx.type());
 			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
@@ -240,7 +267,6 @@ public class Checker extends BurritoBaseListener {
 		}
 	}
 	
-	// TODO: Bounds checking/dimension checking here?
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
 		String id = ctx.ID().getText();
@@ -315,7 +341,6 @@ public class Checker extends BurritoBaseListener {
 			setReach(ctx.ID(), this.scope.reach(id));
 			for (ExprContext expr : ctx.expr())
 				checkType(expr, new Type.Int()); 
-				// TODO: Check amount of dimensions as well?
 		}
 	}
 	
@@ -325,9 +350,11 @@ public class Checker extends BurritoBaseListener {
 
 		Type type = this.scope.type(id);
 		setType(ctx, type);
-		// TODO: Once we support more types than just ints (such as char? Doesn't matter
-		// since it works out but still), we should look at this
-		checkType(ctx, new Type.Int());
+		
+		if (!(type instanceof Type.Int || type instanceof Type.Char)) {
+			addError(ctx, "Type " + type + " is not incrementable");
+		}
+		
 		setOffset(ctx, this.scope.offset(id));
 		setReach(ctx, this.scope.reach(id));
 	}
@@ -338,58 +365,60 @@ public class Checker extends BurritoBaseListener {
 
 		Type type = this.scope.type(id);
 		setType(ctx, type);
-		// TODO: Here as well - there might be some other increment than just floats
 		checkType(ctx, new Type.Int());
 		setOffset(ctx, this.scope.offset(id));
 		setReach(ctx, this.scope.reach(id));
 	}
 	
-	// TODO At compare check if it is a type that can be compared
 	@Override
 	public void exitGtExpr(GtExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Int());
 	}
 	
 	@Override
 	public void exitLtExpr(LtExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Int());
 	}
 	
 	@Override
 	public void exitEqExpr(EqExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Int());
 	}
 	
 	@Override
 	public void exitLteExpr(LteExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Int());
 	}
 	
 	@Override
 	public void exitGteExpr(GteExprContext ctx) {
-		checkTypeCompare(ctx); 
+		checkTypeCompare(ctx, new Type.Int()); 
 	}
 	
 	@Override
 	public void exitAndExpr(AndExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Bool());
 	}
 	
 	@Override
 	public void exitOrExpr(OrExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Bool());
 	}
 	
 	@Override
 	public void exitXorExpr(XorExprContext ctx) {
-		checkTypeCompare(ctx);
+		checkTypeCompare(ctx, new Type.Bool());
 	}
 	
-	void checkTypeCompare(ParserRuleContext ctx) {
+	void checkTypeCompare(ParserRuleContext ctx, Type desired) {
 		Type type1 = getType(ctx.getChild(0));
 		Type type2 = getType(ctx.getChild(2));
 		checkType((ParserRuleContext) ctx.getChild(0), type2);
 		checkType((ParserRuleContext) ctx.getChild(2), type1);
+		if (!(type1.equals(desired) && type2.equals(desired))) {
+			addError(ctx, "Left or right hand side does not match. Found: " + type1 + " and " + type2 + ", expected " + desired);
+		}
+		
 		setType(ctx, new Type.Bool());
 	}
 	
@@ -421,6 +450,12 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitPowExpr(PowExprContext ctx) {
 		checkTypeOp(ctx);
+	}
+	
+	@Override
+	public void exitNotExpr(NotExprContext ctx) {
+		checkType(ctx.expr(), new Type.Bool());
+		setType(ctx, new Type.Bool());
 	}
 	
 	void checkTypeOp(ParserRuleContext ctx) {
@@ -457,7 +492,32 @@ public class Checker extends BurritoBaseListener {
 		setFunction(ctx.ID(), overload);
 	}
 	
+	@Override
+	public void exitLenExpr(LenExprContext ctx) {
+		String id = ctx.ID().getText();
+		Type type = scope.type(id);
+		if (!(type instanceof Type.Array)) {
+			addError(ctx, "len can only be used with arrays");
+		}
+		setType(ctx, new Type.Int());
+		setOffset(ctx.ID(), scope.offset(id));
+		setReach(ctx.ID(), scope.reach(id));
+	}
+	
 	// STATS ----------------------------
+	
+	@Override
+	public void exitOutStat(OutStatContext ctx) {
+		if (ctx.expr() == null)
+			return;
+		
+		Type type = getType(ctx.expr());
+		
+		if (!(type instanceof Type.Int || type instanceof Type.Bool || type instanceof Type.Char)) {
+			addError(ctx, "Pipe operator does not support type " + type);
+		}
+	}
+	
 	@Override
 	public void exitStartStat(StartStatContext ctx) {
 		String func = ctx.ID().getText();
@@ -471,8 +531,13 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitTypeAssignStat(TypeAssignStatContext ctx) {
+		// TODO: Handle arrays
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
+		
+		if (!type.assignable()) {
+			addError(ctx, "It's prohibited to assign a value to something of type " + type);
+		}
 		
 		scope.put(id, type);
 
@@ -487,13 +552,15 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
 		
-		// TODO: Is this correct? Just want to make sure - Bob
-//		if (ctx.getChildCount() > 0) {
-//		if (type instanceof Type.Array) {
-			scope.put(id, type);
-//		} else {
-//			scope.put(id, type);
-//		}
+		if (type instanceof Type.Lock) {
+			addError(ctx, "Declaring a lock in local scope is prohibited");
+		}
+		
+		if (type instanceof Type.Array) {
+			((Type.Array) type).setOuter();
+		}
+		
+		scope.put(id, type);
 		
 		setType(ctx.ID(), type);		
 		setOffset(ctx.ID(), scope.offset(id));
@@ -535,24 +602,16 @@ public class Checker extends BurritoBaseListener {
 	private void checkAssignment(ParseTree ctx) {
 		String id = ctx.getChild(0).getText();
 		
-//		Type type = this.scope.type(id);
-		// TODO: This seemed cleaner, but leaving it here for future reference
 		Type type = getType(ctx.getChild(0));
 		if (type instanceof Type.Array) {
 			type = ((Array) type).getBaseType();
 		}
-//		if (id.contains("[")) {
-//			id = id.split("\\[")[0];
-//			Type.Array array = (Array) this.scope.type(id);
-//			if (array != null) {
-//				type = array.elemType;
-//				while (type.toString().equals("Array")) {
-//					type = ((Type.Array) type).elemType;
-//				}
-//			}
-//		}
 		
 		if (type != null) {
+			if (!type.assignable()) {
+				addError((ParserRuleContext) ctx, "It is prohibited to assign a value to type " + type);
+			}
+			
 			if (checkType((ParserRuleContext) ctx.getChild(3), type)) {
 				setOffset((ParserRuleContext) ctx.getChild(0), scope.offset(id));
 				setReach(ctx, scope.reach(id));
@@ -564,31 +623,10 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitAssStat(AssStatContext ctx) {
-		// Not sure if these comments are ready to be deleted :p
-//		String id = ctx.target().;
-		
-//		Type type = this.scope.type(id);
-//		if (id.contains("[")) {
-//			id = id.split("\\[")[0];
-//			Type.Array array = (Array) this.scope.type(id);
-//			if (array != null) {
-//				type = array.elemType;
-//				while (type.toString().equals("Array")) {
-//					type = ((Type.Array) type).elemType;
-//				}
-//			}
-//		}
-				
 		Type type = getType(ctx.target());
-//		String id = null;
 		
 		if (type != null) {
-			if (checkType(ctx.expr(), type)) {
-//				setOffset(ctx.target(), scope.offset(id));
-//				setReach(ctx.target(), scope.reach(id));
-				// ctx.target sets the offset and the reach.
-				// Leaving the comments here for future reference
-			}
+			checkType(ctx.expr(), type);
 		} else {
 			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
 		}

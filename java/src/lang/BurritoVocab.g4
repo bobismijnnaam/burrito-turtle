@@ -8,6 +8,7 @@ RETURN: '<-';
 START: '->';
 LOCK: 'lock';
 UNLOCK: 'unlock';
+LENGTH: 'len';
 
 PLUS: '+';
 MIN: '-';
@@ -48,6 +49,7 @@ INT: 'int';
 BOOL: 'bool';
 CHAR: 'char';
 LOCKT: 'Lock';
+VOID: 'void';
 AUTO: '$';
 LOCAL: '&';
 GLOBAL: '*';

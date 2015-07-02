@@ -1,0 +1,14 @@
+int[4] a;
+int[4][5] b;
+
+void program()
+	int[6] c;
+	int[7][8] d;
+	
+	len(a)|\;
+	len(b)|\;
+	len(c)|\;
+	len(d)|\;
+	
+	<-;
+.

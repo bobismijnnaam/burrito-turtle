@@ -1,4 +1,4 @@
-int program()
+void program()
 	>> Simple Arithmatic tests
 	int x = 0;
 	int y = 0;
@@ -31,5 +31,5 @@ int program()
 	b|;
 	c|;
 	
-	<- 0;
+	<-;
 .
