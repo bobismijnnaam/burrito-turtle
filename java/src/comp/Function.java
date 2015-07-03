@@ -114,11 +114,9 @@ class Function {
 	@Override
 	public String toString() {
 		String r = "";
-		System.out.println("lets do this");
 
 		for (Overload ol : overloads) {
 			r += "- " + ol.toString() + "\n"; 
-			System.out.println("done 1");
 		}
 		
 		return r;

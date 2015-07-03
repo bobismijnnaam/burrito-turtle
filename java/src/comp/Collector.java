@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lang.BurritoBaseVisitor;
+import lang.BurritoParser.AnyArrayArgContext;
 import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.BoolTypeContext;
@@ -72,6 +73,10 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		String id = ctx.ID().getText();
 		Type type = getType(ctx.type());
 		
+		if (type instanceof Array) {
+			((Array) type).setOuter();
+		}
+		
         scope.putGlobal(id, type);
 
 		return 0;
@@ -116,6 +121,15 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		visit(ctx.type());
 		setType(ctx, getType(ctx.type()));
 
+		return 0;
+	}
+	
+	@Override
+	public Integer visitAnyArrayArg(AnyArrayArgContext ctx) {
+		visit(ctx.type());
+		Type arrType = new Type.AnyArray(getType(ctx.type()));
+		setType(ctx, arrType);
+		
 		return 0;
 	}
 	

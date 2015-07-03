@@ -78,6 +78,7 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+import comp.Type.AnyArray;
 import comp.Type.Array;
 
 
@@ -304,21 +305,45 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitAssStat(AssStatContext ctx) {
-		visit(ctx.target());
-		prog.emit(Push, new Reg(RegE));
-		visit(ctx.expr());
-		prog.emit(Pop, new Reg(RegD));
-		// D = offset, E = Waarde
+		Type type = checkResult.getType(ctx.target());
 		
-		Reach reach = checkResult.getReach(ctx.target());
-		if (reach == Local) {
-			// Waarde mem[arp + offset]
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
-			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
-		} else if (reach == Global) {
+		if (type instanceof AnyArray) {
+			visit(ctx.target());
+			prog.emit(Push, new Reg(RegE));
+			prog.emit(Push, new Reg(RegD));
+			visit(ctx.expr());
+			prog.emit(Pop, new Reg(RegC));
+			prog.emit(Pop, new Reg(RegD));
+			
+			// RegC contains if the array is global or not
+			// RegD contains the offset of the element
+			// RegE contains the value!
+			String stackLabel = Program.mkLbl(ctx, "stackLabel");
+			String doneLabel = Program.mkLbl(ctx, "finishedLabel");
+			
+			prog.emit(Compute, new Operator(Equal), new Reg(RegC), new Reg(Zero), new Reg(RegC));
+			prog.emit(Branch, new Reg(RegC), new Target(stackLabel));
 			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+			prog.emit(Jump, new Target(doneLabel));
+			prog.emit(stackLabel, Store, new Reg(RegE), new MemAddr(RegD)); // Was the ARP added?
+			prog.emit(doneLabel, Nop);
 		} else {
-			System.out.println(ctx.target().getText() + " has no reach set!");
+			visit(ctx.target());
+			prog.emit(Push, new Reg(RegE));
+			visit(ctx.expr());
+			prog.emit(Pop, new Reg(RegD));
+			// D = offset, E = Waarde
+			
+			Reach reach = checkResult.getReach(ctx.target());
+			if (reach == Local) {
+				// Waarde mem[arp + offset]
+				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
+				prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
+			} else if (reach == Global) {
+				prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+			} else {
+				System.out.println(ctx.target().getText() + " has no reach set!");
+			}
 		}
 		
 		return null;
@@ -353,25 +378,57 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Push, new Reg(RegE));
 		}
 		
-		Array array = (Array) checkResult.getType(ctx.ID());
-		prog.emit(Const, new Value(0), new Reg(RegC));
+		Type type = checkResult.getType(ctx.ID());
 		
-		int size = 1;
-		for (int i = array.indexSize.size() - 1; i >= 0; i--) {
-			prog.emit(Pop, new Reg(RegE));
-			prog.emit(Const, new Value(size), new Reg(RegD));
-			prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
-			size *= array.indexSize.get(i);
+		if (type instanceof Array) {
+			Array array = (Array) type;
+			prog.emit(Const, new Value(0), new Reg(RegC));
+			
+			// TODO: Arrays don't actually work with anything bigger than an integer :(
+			int size = 1;
+			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
+				prog.emit(Pop, new Reg(RegE));
+				prog.emit(Const, new Value(size), new Reg(RegD));
+				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
+				size *= array.indexSize.get(i);
+			}
+			
+			// In RegC staat nu offset relatief in array
+			
+			// Get offset from ctx.ID() in RegB
+			// The + 1 is to account for the integer at the array address, which contains the length of the array
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
+			
+			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
+		} else if (type instanceof AnyArray) {
+			AnyArray array = (AnyArray) type;
+			
+			// The first offset
+			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
+			prog.emit(Pop, new Reg(RegB));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+			
+			// C now holds the offset within the array
+			
+			if (array.elemType instanceof Array) {
+				// TODO: Implement this
+				System.out.println("Variable nested arrays not yet implemented");
+			} 
+
+			// We have the correct offset!
+
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
+			prog.emit(Const, new Value(1), new Reg(RegB));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
+			
+			// E contains the offset of the first array element. D contains whether or not it's a global array
 		}
-		
-		// In RegC staat nu offset relatief in array
-		
-		// Get offset from ctx.ID() in RegB
-		// The + 1 is to account for the integer at the array address, which contains the length of the array
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
-		
-		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
+			
 		return null;
 	}
 	
@@ -549,32 +606,77 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Push, new Reg(RegE));
 		}
 		
-		Array array = (Array) checkResult.getType(ctx.ID());
-		prog.emit(Const, new Value(0), new Reg(RegC));
+		Type type = checkResult.getType(ctx.ID()); 
 		
-		int size = 1;
-		for (int i = array.indexSize.size() - 1; i >= 0; i--) {
-			prog.emit(Pop, new Reg(RegE));
-			prog.emit(Const, new Value(size), new Reg(RegD));
-			prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
-			size *= array.indexSize.get(i);
-		}
-		
-		// Waarde mem[arp - offset]
-		// The +1 is to account for the length integer that resides at the arrays' address
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
-		prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
-		
-		Reach reach = checkResult.getReach(ctx.ID());
-		if (reach == Local) {
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
-			prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
-		} else if (reach == Global) {
-			prog.emit(Read, new MemAddr(RegC));
-			prog.emit(Receive, new Reg(RegE));
-		}
+		if (type instanceof Array) {
+			Array array = (Array) type;
 
+			prog.emit(Const, new Value(0), new Reg(RegC));
+			
+			int size = 1;
+			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
+				prog.emit(Pop, new Reg(RegE));
+				prog.emit(Const, new Value(size), new Reg(RegD));
+				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
+				size *= array.indexSize.get(i);
+			}
+			
+			// Waarde mem[arp - offset]
+			// The +1 is to account for the length integer that resides at the arrays' address
+			System.out.println(((Array) checkResult.getType(ctx.ID())).isOuter());
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
+			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+			
+			Reach reach = checkResult.getReach(ctx.ID());
+			if (reach == Local) {
+				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
+				prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+			} else if (reach == Global) {
+				prog.emit(Read, new MemAddr(RegC));
+				prog.emit(Receive, new Reg(RegE));
+			}
+		} else if (type instanceof AnyArray) {
+			AnyArray array = (AnyArray) type;
+			
+			// The first offset
+			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
+			prog.emit(Pop, new Reg(RegB));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+			
+			// C now holds the offset within the array
+			
+			if (array.elemType instanceof Array) {
+				// TODO: Implement this
+				System.out.println("Variable nested arrays not yet implemented");
+			} 
+
+			// We have the correct offset!
+
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
+			prog.emit(Const, new Value(1), new Reg(RegB));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
+			
+			// RegD contains if the array is global or not
+			// RegE contains the offset of the element
+			String stackLabel = Program.mkLbl(ctx, "stackLabel");
+			String doneLabel = Program.mkLbl(ctx, "finishedLabel");
+			
+			prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegD));
+			prog.emit(Branch, new Reg(RegD), new Target(stackLabel));
+			prog.emit(Read, new MemAddr(RegE));
+			prog.emit(Receive, new Reg(RegE));
+			prog.emit(Jump, new Target(doneLabel));
+			prog.emit(stackLabel, Load, new MemAddr(RegE), new Reg(RegE)); // Was the ARP added?
+			prog.emit(doneLabel, Nop);
+			
+			// E contains the offset of the first array element. D contains whether or not it's a global array
+		}
+		
 		return null;
 	}
 	
@@ -788,8 +890,26 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// TODO: What if an expr is an obj or array?
 		// Don't forget to also support this in the checker!
 		for (ExprContext expr : ctx.expr()) {
-			visit(expr);
-			prog.emit(Push, new Reg(RegE));
+			Type type = checkResult.getType(expr);
+			
+			if (type instanceof Array) {
+				Reach reach = checkResult.getReach(expr);
+				
+				if (reach == Global) {
+					prog.emit(Const, new Value(1), new Reg(RegE));
+					prog.emit(Push, new Reg(RegE));
+					prog.emit(Const, new Value(checkResult.getOffset(expr)+1), new Reg(RegE));
+					prog.emit(Push, new Reg(RegE));
+				} else if (reach == Local) {
+					prog.emit(Push, new Reg(Zero));
+					prog.emit(Const, new Value(checkResult.getOffset(expr)), new Reg(RegE));
+					prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+					prog.emit(Push, new Reg(RegE));
+				}
+			} else {
+				visit(expr);
+				prog.emit(Push, new Reg(RegE));
+			}
 		}
 		
 		// Push zero so the SP points to an EMPTY SLOT!
@@ -826,15 +946,44 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitLenExpr(LenExprContext ctx) {
-		Reach reach = checkResult.getReach(ctx.ID());
-		
-		prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-		if (reach == Local) {
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+		Type type = checkResult.getType(ctx.ID());
+	
+		if (type instanceof AnyArray) {
+			String stackLabel = Program.mkLbl(ctx, "stackLabel");
+			String doneLabel = Program.mkLbl(ctx, "doneLabel");
+			
+			prog.emit(Const, new Value(1), new Reg(RegD)); // D contains 1
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE)); // E contains the anyarray address
+			
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegC)); // C contains whether or not it is global
+			
+			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE));
 			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-		} else if (reach == Global) {
+		
+			prog.emit(Compute, new Operator(Equal), new Reg(RegC), new Reg(Zero), new Reg(RegC));
+			prog.emit(Branch, new Reg(RegC), new Target(stackLabel));
+			// It's a global variable!
+			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // minus 1 to get at the integer that stores the size
 			prog.emit(Read, new MemAddr(RegE));
 			prog.emit(Receive, new Reg(RegE));
+			prog.emit(Jump, new Target(doneLabel));
+			
+			// It's a stack variable!
+			prog.emit(stackLabel, Compute, new Operator(Add), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // add 1 to get at the integer that stores the size (it's on the stack so we need to go towards 128)
+			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+			prog.emit(doneLabel, Nop);
+		} else if (type instanceof Array) {
+			Reach reach = checkResult.getReach(ctx.ID());
+			
+			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+			if (reach == Local) {
+				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+				prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+			} else if (reach == Global) {
+				prog.emit(Read, new MemAddr(RegE));
+				prog.emit(Receive, new Reg(RegE));
+			}
 		}
 		
 		return null;

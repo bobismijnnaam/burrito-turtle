@@ -5,7 +5,7 @@ import java.util.List;
 
 import lang.BurritoBaseListener;
 import lang.BurritoParser.AndExprContext;
-import lang.BurritoParser.ArgContext;
+import lang.BurritoParser.AnyArrayArgContext;
 import lang.BurritoParser.ArrayExprContext;
 import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.ArrayTypeContext;
@@ -31,9 +31,9 @@ import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.ImpContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LenExprContext;
 import lang.BurritoParser.LitExprContext;
 import lang.BurritoParser.LiteralExprContext;
-import lang.BurritoParser.LenExprContext;
 import lang.BurritoParser.LockStatContext;
 import lang.BurritoParser.LockTypeContext;
 import lang.BurritoParser.LtExprContext;
@@ -69,6 +69,7 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import comp.Type.AnyArray;
 import comp.Type.Array;
 
 public class Checker extends BurritoBaseListener {
@@ -121,10 +122,6 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
 
-		if (type instanceof Type.Array) {
-			((Type.Array) type).setOuter();
-		}
-		
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
 		
@@ -187,6 +184,16 @@ public class Checker extends BurritoBaseListener {
 
 		scope.recordArg(argID, argType);
 
+		setType(ctx, argType);
+	}
+	
+	@Override
+	public void exitAnyArrayArg(AnyArrayArgContext ctx) {
+		String argID = ctx.ID().getText();
+		Type argType = new AnyArray(getType(ctx.type()));
+		
+		scope.recordArg(argID, argType);
+		
 		setType(ctx, argType);
 	}
 	
@@ -280,18 +287,37 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitArrayTarget(ArrayTargetContext ctx) {
 		String id = ctx.ID().getText();
-		Type.Array array = (Array) this.scope.type(id);
+		Type type = scope.type(id);
+		if (type instanceof Type.Array) {
+			Type.Array array = (Array) type;
 
-		if (array == null) {
-			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-		} else {
-			setType(ctx.ID(), array);
-			setType(ctx, array.getBaseType());
-			setOffset(ctx.ID(), this.scope.offset(id));
-			setReach(ctx, this.scope.reach(id));
+			if (array == null) {
+				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+			} else {
+				setType(ctx.ID(), array);
+				setType(ctx, array.getBaseType());
+				setOffset(ctx.ID(), this.scope.offset(id));
+				setReach(ctx, this.scope.reach(id));
+				
+				for (ExprContext expr : ctx.expr()) {
+					checkType(expr, new Type.Int());
+				}
+			}
+		} else if (type instanceof Type.AnyArray) {
+			AnyArray array = (AnyArray) type;
 			
-			for (ExprContext expr : ctx.expr()) 
-				checkType(expr, new Type.Int());
+			if (array == null) {
+				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+			} else {
+				setType(ctx.ID(), array);
+				setType(ctx, array);
+				setOffset(ctx.ID(), this.scope.offset(id));
+				setReach(ctx, this.scope.reach(id));
+				
+				for (ExprContext expr : ctx.expr()) {
+					checkType(expr, new Type.Int());
+				}
+			}
 		}
 	}
 	
@@ -347,17 +373,35 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitArrayExpr(ArrayExprContext ctx) {
 		String id = ctx.ID().getText();
-		Type.Array array = (Array) this.scope.type(id);
-		if (array == null) {
-			addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-		} else {
-			setType(ctx.ID(), array);
-			
-			setType(ctx, array.getBaseType());
-			setOffset(ctx.ID(), this.scope.offset(id));
-			setReach(ctx.ID(), this.scope.reach(id));
-			for (ExprContext expr : ctx.expr())
-				checkType(expr, new Type.Int()); 
+		Type type = scope.type(id);
+		
+		if (type instanceof Type.Array) {
+			Type.Array array = (Array) this.scope.type(id);
+			if (array == null) {
+				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+			} else {
+				setType(ctx.ID(), array);
+				
+				setType(ctx, array.getBaseType());
+				setOffset(ctx.ID(), this.scope.offset(id));
+				setReach(ctx.ID(), this.scope.reach(id));
+				for (ExprContext expr : ctx.expr())
+					checkType(expr, new Type.Int()); 
+			}
+		} else if (type instanceof Type.AnyArray) {
+			AnyArray array = (AnyArray) this.scope.type(id);
+			if (array == null) {
+				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+			} else {
+				setType(ctx.ID(), array);
+				
+				setType(ctx, array.getBaseType());
+				setOffset(ctx.ID(), this.scope.offset(id));
+				setReach(ctx.ID(), this.scope.reach(id));
+				for (ExprContext expr : ctx.expr()) {
+					checkType(expr, new Type.Int()); 
+				}
+			}			
 		}
 	}
 	
@@ -428,6 +472,8 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	void checkTypeCompare(ParserRuleContext ctx, Type desired) {
+		System.out.println(ctx.getChild(0).getText());
+		System.out.println(ctx.getChild(2).getText());
 		Type type1 = getType(ctx.getChild(0));
 		Type type2 = getType(ctx.getChild(2));
 		checkType((ParserRuleContext) ctx.getChild(0), type2);
@@ -513,10 +559,18 @@ public class Checker extends BurritoBaseListener {
 	public void exitLenExpr(LenExprContext ctx) {
 		String id = ctx.ID().getText();
 		Type type = scope.type(id);
-		if (!(type instanceof Type.Array)) {
+
+		if (!((type instanceof Type.Array) || (type instanceof Type.AnyArray))) {
 			addError(ctx, "len can only be used with arrays");
 		}
+		
+		if (!scope.contains(id)) {
+			addError(ctx,  "Variable " + id + " not defined");
+			return;
+		}
+		
 		setType(ctx, new Type.Int());
+		setType(ctx.ID(), type);
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
 	}
@@ -643,7 +697,15 @@ public class Checker extends BurritoBaseListener {
 		Type type = getType(ctx.target());
 		
 		if (type != null) {
-			checkType(ctx.expr(), type);
+			if (type instanceof AnyArray) {
+				Type typeLeft = ((AnyArray) type).getBaseType();
+				Type typeRight = getType(ctx.expr());
+				if (!typeLeft.equals(typeRight)) {
+					addError(ctx, "Expected type " + typeLeft + " but found type " + typeRight);
+				}
+			} else {
+				checkType(ctx.expr(), type);
+			}
 		} else {
 			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
 		}
@@ -712,6 +774,9 @@ public class Checker extends BurritoBaseListener {
 	 * and adds an error if it does not correspond to the expected type.
 	 */
 	private boolean checkType(ParserRuleContext node, Type expected) {
+		if (expected == null)
+			return false;
+		
 		Type actual = getType(node);
 		if (actual == null) {
 			addError(node, "Missing inferred type of " + node.getText());

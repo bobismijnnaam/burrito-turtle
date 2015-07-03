@@ -162,6 +162,11 @@ abstract public class Type {
 		}
 	}
 	
+	/**
+	 * The first integer contains whether it is global or not: false is local, true is global. The second integer contains the absolute address.
+	 * @author Bob
+	 *
+	 */
 	static public class AnyArray extends Type {
 		public Type elemType;
 		
@@ -184,6 +189,22 @@ abstract public class Type {
 
 		@Override
 		public boolean assignable() {
+			return false;
+		}
+		
+		@Override
+		public String toString() {
+			return "array with any amount of " + elemType.toString();
+		}
+		
+		@Override
+		public boolean equals(Object other) {
+			if (other instanceof AnyArray) {
+				return elemType.equals(((AnyArray) other).elemType);
+			} else if (other instanceof Array) {
+				return elemType.equals(((Array) other).elemType);
+			}
+			
 			return false;
 		}
 	}

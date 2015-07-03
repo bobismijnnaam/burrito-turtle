@@ -1,14 +1,32 @@
-int[4] a;
-int[4][5] b;
+char[11] a;
+char[2][3] b;
+
+void println(char[] arr)
+	int i = 0; i < len(arr)@
+		arr[i]|;
+		i+;
+	.
+	|\;
+	<-;
+.
 
 void program()
-	int[6] c;
-	int[7][8] d;
-	
 	len(a)|\;
 	len(b)|\;
-	len(c)|\;
-	len(d)|\;
+	
+	a[0] = 'h';
+	a[1] = 'e';
+	a[2] = 'l';
+	a[3] = 'l';
+	a[4] = 'o';
+	a[5] = ' ';
+	a[6] = 'w';
+	a[7] = 'o';
+	a[8] = 'r';
+	a[9] = 'l';
+	a[10] = 'd';
+	
+	println(a);
 	
 	<-;
 .
