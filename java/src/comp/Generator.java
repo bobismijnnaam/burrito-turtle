@@ -77,10 +77,12 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
+
 import comp.Type.Array;
 import comp.Type.Char;
 import comp.Type.Int;
 import comp.Type.Pointer;
+import comp.Type.StringLiteral;
 
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
@@ -199,14 +201,28 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		if (ctx.expr() != null) {
-			visit(ctx.expr());
-			// Value is now in E
-			// TODO: What if type is object or array?
-			
-			// Get offset
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
-			// Write E to offset
-			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+			Type right = checkResult.getType(ctx.expr());
+			if (right instanceof StringLiteral) {
+				StringLiteral sl = (StringLiteral) right;
+				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
+				prog.emit(Const, new Value(1), new Reg(RegC));
+				
+				for (char c : sl.content.toCharArray()) {
+					prog.emit(Const, new Value(c), new Reg(RegE));
+					prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+					prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegC), new Reg(RegD));
+				}
+				prog.emit(Write, new Reg(Zero), new MemAddr(RegD));
+			} else {
+				visit(ctx.expr());
+				// Value is now in E
+				// TODO: What if type is object or array?
+				
+				// Get offset
+				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
+				// Write E to offset
+				prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+			}
 		}
 		
 		return null;
@@ -304,13 +320,32 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			System.out.println("[Generator] THIS IS WRONG");
 		} else if (reach == Local) {
 			Type type = checkResult.getType(ctx.ID());
-			for (int i = 0; i < type.size(); i++) {
+			
+			Type right = checkResult.getType(ctx.expr());
+			if (right instanceof StringLiteral) {
+				StringLiteral sl = (StringLiteral) right;
+				
+				char[] chars = sl.content.toCharArray();
+				prog.emit(Const, new Value(chars[0]), new Reg(RegE));
+				prog.emit(Store, new Reg(RegE), new MemAddr(SP));
+				
+				for (int i = 1; i < chars.length; i++) {
+					prog.emit(Const, new Value(chars[i]), new Reg(RegE));
+					prog.emit(Push, new Reg(RegE));
+				}
+
 				prog.emit(Push, new Reg(Zero));
+				prog.emit(Push, new Reg(Zero));
+			} else {
+				for (int i = 0; i < type.size(); i++) {
+					prog.emit(Push, new Reg(Zero));
+				}
+
+				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
+				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
+				prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 			}
 			
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegB));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
-			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
 		}
 		
 		return null;

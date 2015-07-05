@@ -148,14 +148,12 @@ public class CheckerTest {
 		try {
 			Scope scope = collector.generate(result);
 			Result checkResult = checker.check(result, scope);
-			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(1)).getClass());
-			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(1).getChild(0)).getClass());
-			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(1).getChild(2)).getClass());
+			assertEquals(new Type.Array(null, 0).getClass(), checkResult.getType(result.getChild(0).getChild(1).getChild(0)).getClass());
+			assertEquals(new Type.Int().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(0)).getClass());
+			assertEquals(new Type.Bool().getClass(), checkResult.getType(result.getChild(0).getChild(2).getChild(2)).getClass());
 		} catch (ParseException e) {
 			
 		}
-		
-		assertEquals(true, checker.hasErrors());
 		
 		// array not initialized
 		testProgram = "void program() i[1] = true; <-; .";
@@ -208,7 +206,7 @@ public class CheckerTest {
 		try {
 			Scope scope = collector.generate(result);
 			Result checkResult = checker.check(result, scope);
-			assertEquals(216 + 1, checkResult.getOffset(result.getChild(0).getChild(2).getChild(1)));
+			assertEquals(216, checkResult.getOffset(result.getChild(0).getChild(2).getChild(1)));
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}

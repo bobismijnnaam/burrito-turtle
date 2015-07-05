@@ -743,12 +743,12 @@ public class Checker extends BurritoBaseListener {
 				return;
 			}
 
-			setType(ctx.ID(), type);	
 			checkType(ctx.expr(), type);
 		}
 		
 		scope.put(id, type);
 		
+		setType(ctx.ID(), type);	
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
 	}
@@ -809,6 +809,11 @@ public class Checker extends BurritoBaseListener {
 	public void assChecker(ExprContext target, ExprContext param, Operator.Which modus) {
 		Type left = getType(target);
 		Type right = getType(param);
+		
+		if (left == null || right == null) {
+			addError(target, "Missing inferred type of left or right hand side");
+			return;
+		}
 		
 		if ((left instanceof Char || left instanceof Int || left instanceof Bool) && (right instanceof Char || right instanceof Int || right instanceof Bool)) {
 			// Fine
