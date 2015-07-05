@@ -15,12 +15,13 @@ import java.util.Stack;
 import lang.BurritoBaseVisitor;
 import lang.BurritoParser.AndExprContext;
 import lang.BurritoParser.ArrayExprContext;
-import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
 import lang.BurritoParser.CharacterExprContext;
 import lang.BurritoParser.DecExprContext;
 import lang.BurritoParser.DeclContext;
+import lang.BurritoParser.DeferExprContext;
+import lang.BurritoParser.DerefExprContext;
 import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
@@ -31,12 +32,10 @@ import lang.BurritoParser.FuncExprContext;
 import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
-import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.LitExprContext;
 import lang.BurritoParser.LiteralExprContext;
-import lang.BurritoParser.LenExprContext;
 import lang.BurritoParser.LockStatContext;
 import lang.BurritoParser.LtExprContext;
 import lang.BurritoParser.LteExprContext;
@@ -46,6 +45,7 @@ import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulAssStatContext;
 import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
+import lang.BurritoParser.NeqExprContext;
 import lang.BurritoParser.NotExprContext;
 import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.OrExprContext;
@@ -68,7 +68,6 @@ import lang.BurritoParser.XorExprContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 import sprockell.Addr;
 import sprockell.Instr;
@@ -78,8 +77,10 @@ import sprockell.Program;
 import sprockell.Reg;
 import sprockell.Target;
 import sprockell.Value;
-import comp.Type.AnyArray;
 import comp.Type.Array;
+import comp.Type.Char;
+import comp.Type.Int;
+import comp.Type.Pointer;
 
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
@@ -96,6 +97,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	private String printBoolLabel;
 	private String printIntLabel;
 	private String printCharLabel;
+	private String printPointerLabel;
 	private String idleFuncLabel;
 	
 	// stdio = Addr stdioAddr
@@ -196,12 +198,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
 		}
 		
-		if (type instanceof Type.Array) {
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-			prog.emit(Const, new Value(((Type.Array) type).length()), new Reg(RegD));
-			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
-		}
-		
 		if (ctx.expr() != null) {
 			visit(ctx.expr());
 			// Value is now in E
@@ -239,45 +235,62 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitPlusAssStat(PlusAssStatContext ctx) {
-		return emitOpAss(ctx, Add);
+		return emitOpAss(ctx.expr(0), ctx.expr(1), Add);
 	}
 	
 	@Override
 	public List<Instr> visitMinAssStat(MinAssStatContext ctx) {
-		return emitOpAss(ctx, Sub);
+		return emitOpAss(ctx.expr(0), ctx.expr(1), Sub);
 	}
 	
 	@Override
-	public List<Instr> visitDivAssStat(DivAssStatContext ctx) {
-		return emitOpAss(ctx, Div);
+	public List<Instr> visitDivAssStat(DivAssStatContext ctx) { 
+		return emitOpAss(ctx.expr(0), ctx.expr(1), Div);
 	}
 	
 	@Override
 	public List<Instr> visitMulAssStat(MulAssStatContext ctx) {
-		return emitOpAss(ctx, Mul);
+		return emitOpAss(ctx.expr(0), ctx.expr(1), Mul);
 	}
 	
-	private List<Instr> emitOpAss(ParserRuleContext ctx, Operator.Which op) {
-		visit(ctx.getChild(0));
-		prog.emit(Push, new Reg(RegE));
-		visit(ctx.getChild(3));
-		prog.emit(Pop, new Reg(RegD));
+	private List<Instr> emitOpAss(ExprContext target, ExprContext param, Operator.Which op) {
+		visit(target); // E contains the initial value, D contains the address with bit
+		prog.emit(Push, new Reg(RegE)); // Push the resulting value
+		prog.emit(Push, new Reg(RegD)); // Push the address with address space bit
+		visit(param); // E now contains the usable value
+		
+		Type left = checkResult.getType(target);
+		Type right = checkResult.getType(param);
+		
+		if (left instanceof Pointer) {
+			Pointer ptr = (Pointer) left; 
+			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(Zero), new Reg(RegC));
+			prog.emit(Const, new Value(ptr.pointsTo.size()), new Reg(RegB));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+			prog.emit(Pop, new Reg(RegD));
+			prog.emit(Pop, new Reg(RegE));
+			prog.emit(Push, new Reg(RegD));
 
-		// an offset now resides in RegD
-		Reach reach = checkResult.getReach(ctx);
-		if (reach == Local) {
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
-			// mem addr => RegB get target value
-			prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
-			prog.emit(Compute, new Operator(op), new Reg(RegC), new Reg(RegE), new Reg(RegE));
-			prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
-		} else if (reach ==  Global) {
-			prog.emit(Read, new MemAddr(RegD));
-			prog.emit(Receive, new Reg(RegB));
-			prog.emit(Compute, new Operator(op), new Reg(RegB), new Reg(RegE), new Reg(RegE));
-			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+			if (op == Equal) {
+				// Sure, initialize your pointer with an integer
+			} else if (op == Add) {
+				adjustPtrInEToC(target);
+			} else if (op == Sub) {
+				prog.emit(Compute, new Operator(Sub), new Reg(Zero), new Reg(RegC), new Reg(RegC));
+				adjustPtrInEToC(target);
+			}
+
+			prog.emit(Pop, new Reg(RegD));
+		} else {
+			System.out.println("GRR");
+			prog.emit(Pop, new Reg(RegD)); // Restore the target address
+			prog.emit(Pop, new Reg(RegC)); // Put the previous value in C
+			prog.emit(Compute, new Operator(op), new Reg(RegC), new Reg(RegE), new Reg(RegE)); // Put the new value in E
 		}
 		
+		// Save E at the address pointed to by D
+		saveEinDerefD((ParserRuleContext) target.parent);
+
 		return null;
 	}
 	
@@ -303,48 +316,40 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	/**
+	 * Saves value in register E in address pointed to by D. D SHOULD contain the address bit!
+	 * When in doubt, this method uses ALL REGISTERS! After use, D still contains the address bit.
+	 * @param ctx A seed for the mkLbl function
+	 */
+	public void saveEinDerefD(ParserRuleContext ctx) {
+		String globalLabel = Program.mkLbl(ctx, "globalAssignment");
+		String endLabel = Program.mkLbl(ctx, "endAssignment");
+		
+		prog.emit(Const, new Value(31), new Reg(RegC));
+		prog.emit(Compute, new Operator(RShift), new Reg(RegD), new Reg(RegC), new Reg(RegC)); // C now contains -1 if it's global, 0 if it's local
+		prog.emit(Compute, new Operator(Mul), new Reg(RegC), new Reg(RegC), new Reg(RegC)); // C now contains 1 if it's global, 0 if it's local
+		prog.emit(Branch, new Reg(RegC), new Target(globalLabel));
+
+		// It should be saved on stack
+		prog.emit(Store, new Reg(RegE), new MemAddr(RegD));
+		prog.emit(Jump, new Target(endLabel));
+		
+		// It should be saved on the heap
+		prog.emit(globalLabel, Const, new Value(-2147483648), new Reg(RegB));
+		prog.emit(Compute, new Operator(Xor), new Reg(RegB), new Reg(RegD), new Reg(RegD)); // RegD now contains the address without the address space bit
+		prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+		prog.emit(Compute, new Operator(Xor), new Reg(RegB), new Reg(RegD), new Reg(RegD)); // RegD now contains the address without the address space bit
+		prog.emit(endLabel, Nop);
+	}
+	
 	@Override
 	public List<Instr> visitAssStat(AssStatContext ctx) {
-		Type type = checkResult.getType(ctx.target());
+		visit(ctx.expr(0));
+		prog.emit(Push, new Reg(RegD));
+		visit(ctx.expr(1));
+		prog.emit(Pop, new Reg(RegD));
 		
-		if (type instanceof AnyArray) {
-			visit(ctx.target());
-			prog.emit(Push, new Reg(RegE));
-			prog.emit(Push, new Reg(RegD));
-			visit(ctx.expr());
-			prog.emit(Pop, new Reg(RegC));
-			prog.emit(Pop, new Reg(RegD));
-			
-			// RegC contains if the array is global or not
-			// RegD contains the offset of the element
-			// RegE contains the value!
-			String stackLabel = Program.mkLbl(ctx, "stackLabel");
-			String doneLabel = Program.mkLbl(ctx, "finishedLabel");
-			
-			prog.emit(Compute, new Operator(Equal), new Reg(RegC), new Reg(Zero), new Reg(RegC));
-			prog.emit(Branch, new Reg(RegC), new Target(stackLabel));
-			prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
-			prog.emit(Jump, new Target(doneLabel));
-			prog.emit(stackLabel, Store, new Reg(RegE), new MemAddr(RegD)); // Was the ARP added?
-			prog.emit(doneLabel, Nop);
-		} else {
-			visit(ctx.target());
-			prog.emit(Push, new Reg(RegE));
-			visit(ctx.expr());
-			prog.emit(Pop, new Reg(RegD));
-			// D = offset, E = Waarde
-			
-			Reach reach = checkResult.getReach(ctx.target());
-			if (reach == Local) {
-				// Waarde mem[arp + offset]
-				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegB));
-				prog.emit(Store, new Reg(RegE), new MemAddr(RegB));
-			} else if (reach == Global) {
-				prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
-			} else {
-				System.out.println(ctx.target().getText() + " has no reach set!");
-			}
-		}
+		saveEinDerefD(ctx);
 		
 		return null;
 	}
@@ -360,84 +365,92 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Push, new Reg(Zero));
 		}
 		
-		if (type instanceof Type.Array) {
-			Type.Array arr = (Type.Array) type;
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-			prog.emit(Const, new Value(arr.length()), new Reg(RegD));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-			prog.emit(Store, new Reg(RegD), new MemAddr(RegE));
-		}
+		// TODO: Is this relevant?
+//		if (type instanceof Type.Pointer) {
+//			Type.Pointer ptr = (Type.Pointer) type;
+//
+//			if (ptr.isArray()) {
+//				prog.emit(Push, new Reg(Zero));
+//				
+//				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+//				prog.emit(Const, new Value(1), new Reg(RegD));
+//				prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegE), new Reg(RegD));
+//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegD));
+//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+//				prog.emit(Store, new Reg(RegD), new MemAddr(RegE));
+//			}
+//		}
 		
 		return null;
 	}
 	
-	@Override
-	public List<Instr> visitArrayTarget(ArrayTargetContext ctx) {
-		for (ExprContext expr : ctx.expr()) {
-			visit(expr);
-			prog.emit(Push, new Reg(RegE));
-		}
-		
-		Type type = checkResult.getType(ctx.ID());
-		
-		if (type instanceof Array) {
-			Array array = (Array) type;
-			prog.emit(Const, new Value(0), new Reg(RegC));
-			
-			// TODO: Arrays don't actually work with anything bigger than an integer :(
-			int size = 1;
-			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
-				prog.emit(Pop, new Reg(RegE));
-				prog.emit(Const, new Value(size), new Reg(RegD));
-				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
-				size *= array.indexSize.get(i);
-			}
-			
-			// In RegC staat nu offset relatief in array
-			
-			// Get offset from ctx.ID() in RegB
-			// The + 1 is to account for the integer at the array address, which contains the length of the array
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
-			
-			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
-		} else if (type instanceof AnyArray) {
-			AnyArray array = (AnyArray) type;
-			
-			// The first offset
-			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
-			prog.emit(Pop, new Reg(RegB));
-			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
-			
-			// C now holds the offset within the array
-			
-			if (array.elemType instanceof Array) {
-				// TODO: Implement this
-				System.out.println("Variable nested arrays not yet implemented");
-			} 
-
-			// We have the correct offset!
-
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
-			prog.emit(Const, new Value(1), new Reg(RegB));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
-			
-			// E contains the offset of the first array element. D contains whether or not it's a global array
-		}
-			
-		return null;
-	}
+//	@Override
+//	public List<Instr> visitArrayTarget(ArrayTargetContext ctx) {
+//		for (ExprContext expr : ctx.expr()) {
+//			visit(expr);
+//			prog.emit(Push, new Reg(RegE));
+//		}
+//		
+//		Type type = checkResult.getType(ctx.ID());
+//		
+//		if (type instanceof Array) {
+//			Array array = (Array) type;
+//			prog.emit(Const, new Value(0), new Reg(RegC));
+//			
+//			// TODO: Arrays don't actually work with anything bigger than an integer :(
+//			int size = 1;
+//			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
+//				prog.emit(Pop, new Reg(RegE));
+//				prog.emit(Const, new Value(size), new Reg(RegD));
+//				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+//				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
+//				size *= array.indexSize.get(i);
+//			}
+//			
+//			// In RegC staat nu offset relatief in array
+//			
+//			// Get offset from ctx.ID() in RegB
+//			// The + 1 is to account for the integer at the array address, which contains the length of the array
+//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
+//			
+//			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
+//		} else if (type instanceof AnyArray) {
+//			AnyArray array = (AnyArray) type;
+//			
+//			// The first offset
+//			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
+//			prog.emit(Pop, new Reg(RegB));
+//			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+//			
+//			// C now holds the offset within the array
+//			
+//			if (array.elemType instanceof Array) {
+//				// TODO: Implement this
+//				System.out.println("Variable nested arrays not yet implemented");
+//			} 
+//
+//			// We have the correct offset!
+//
+//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
+//			prog.emit(Const, new Value(1), new Reg(RegB));
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+//			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
+//			
+//			// E contains the offset of the first array element. D contains whether or not it's a global array
+//		}
+//			
+//		return null;
+//	}
 	
-	@Override
-	public List<Instr> visitIdTarget(IdTargetContext ctx) {
-		// Get offset from ctx.ID() in RegE
-		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegE));
-		return null;
-	}
+//	@Override
+//	public List<Instr> visitIdTarget(IdTargetContext ctx) {
+//		// Get offset from ctx.ID() in RegE
+//		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegE));
+//		return null;
+//	}
 	
 	@Override
 	public List<Instr> visitIfStat(IfStatContext ctx) {
@@ -493,12 +506,13 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		// put value to switch on in E
 		visit(ctx.expr());
 		prog.emit(Push, new Reg(RegE));
-		prog.emit(Pop, new Reg(RegD));
+		prog.emit(Pop, new Reg(RegB));
 		
 		// for each case
 		for (LitExprContext lit : ctx.litExpr()) {
 			visit(lit);
-			prog.emit(Compute, new Operator(NEq), new Reg(RegD), new Reg(RegE), new Reg(RegC));
+			prog.emit(Compute, new Operator(NEq), new Reg(RegB), new Reg(RegE), new Reg(RegC));
+
 			prog.emit(Branch, new Reg(RegC), new Target(endCaseLabel));
 			visit(ctx.block(block));
 			block++;
@@ -513,9 +527,9 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(defaultLabel, Nop);
 			if (!ctx.block().isEmpty()) {
 				visit(ctx.block(ctx.block().size() - 1));
-			} else {
-				visit(ctx.block(0));
-			}
+			} // else { // TODO: What is this?
+			  // visit(ctx.block(0));
+			// }
 			prog.emit(Jump, new Target(endLabel));
 		}
 		
@@ -589,6 +603,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	// TODO: Handle pointers here
 	private List<Instr> emitArOp(ParserRuleContext ctx, Operator.Which op) {
 		visit(ctx.getChild(0));
 		prog.emit(Push, new Reg(RegE));
@@ -599,137 +614,169 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	@Override
-	public List<Instr> visitArrayExpr(ArrayExprContext ctx) {
-		for (ExprContext expr : ctx.expr()) {
-			visit(expr);
-			prog.emit(Push, new Reg(RegE));
-		}
+//	@Override
+//	public List<Instr> visitArrayExpr(ArrayExprContext ctx) {
+//		for (ExprContext expr : ctx.expr()) {
+//			visit(expr);
+//			prog.emit(Push, new Reg(RegE));
+//		}
+//		
+//		Type type = checkResult.getType(ctx.ID()); 
+//		
+//		if (type instanceof Array) {
+//			Array array = (Array) type;
+//
+//			prog.emit(Const, new Value(0), new Reg(RegC));
+//			
+//			int size = 1;
+//			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
+//				prog.emit(Pop, new Reg(RegE));
+//				prog.emit(Const, new Value(size), new Reg(RegD));
+//				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+//				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
+//				size *= array.indexSize.get(i);
+//			}
+//			
+//			// Waarde mem[arp - offset]
+//			// The +1 is to account for the length integer that resides at the arrays' address
+//			System.out.println(((Array) checkResult.getType(ctx.ID())).isOuter());
+//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
+//			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+//			
+//			Reach reach = checkResult.getReach(ctx.ID());
+//			if (reach == Local) {
+//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
+//				prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
+//			} else if (reach == Global) {
+//				prog.emit(Read, new MemAddr(RegC));
+//				prog.emit(Receive, new Reg(RegE));
+//			}
+//		} else if (type instanceof AnyArray) {
+//			AnyArray array = (AnyArray) type;
+//			
+//			// The first offset
+//			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
+//			prog.emit(Pop, new Reg(RegB));
+//			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+//			
+//			// C now holds the offset within the array
+//			
+//			if (array.elemType instanceof Array) {
+//				// TODO: Implement this
+//				System.out.println("Variable nested arrays not yet implemented");
+//			} 
+//
+//			// We have the correct offset!
+//
+//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
+//			prog.emit(Const, new Value(1), new Reg(RegB));
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+//			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
+//			
+//			// RegD contains if the array is global or not
+//			// RegE contains the offset of the element
+//			String stackLabel = Program.mkLbl(ctx, "stackLabel");
+//			String doneLabel = Program.mkLbl(ctx, "finishedLabel");
+//			
+//			prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegD));
+//			prog.emit(Branch, new Reg(RegD), new Target(stackLabel));
+//			prog.emit(Read, new MemAddr(RegE));
+//			prog.emit(Receive, new Reg(RegE));
+//			prog.emit(Jump, new Target(doneLabel));
+//			prog.emit(stackLabel, Load, new MemAddr(RegE), new Reg(RegE)); // Was the ARP added?
+//			prog.emit(doneLabel, Nop);
+//			
+//			// E contains the offset of the first array element. D contains whether or not it's a global array
+//		}
+//		
+//		return null;
+//	}
+	
+	/**
+	 * Moves a pointer (with address bit set) in an array-like fashion: stack pointers with + towards 0,
+	 * and shared pointers with + towards infinity, and the other way around with minus.
+	 * When in doubt, this sequence needs ALL REGISTERS (except A)
+	 * @param ctx A seed for mkLbl
+	 * @param dist The distance the ptr has to move
+	 */
+	public void adjustPtrInE(ParserRuleContext ctx, int dist) {
+		prog.emit(Const, new Value(dist), new Reg(RegC));
+		adjustPtrInEToC(ctx);
+	}
+	
+	/**
+	 * Moves a pointer (with address bit set) in an array-like fashion: stack pointers with + towards 0,
+	 * and shared pointers with + towards infinity, and the other way around with minus. The distance
+	 * moved is taken from C.
+	 * When in doubt, this sequence needs ALL REGISTERS (except A)
+	 * @param ctx A seed for mkLbl
+	 */
+	public void adjustPtrInEToC(ParserRuleContext ctx) {
+		String globalLabel = Program.mkLbl(ctx, "globalIncLabel");
+		String endLabel = Program.mkLbl(ctx, "decideEndLabel");
 		
-		Type type = checkResult.getType(ctx.ID()); 
+		prog.emit(Const, new Value(31), new Reg(RegD));
+
+		prog.emit(Compute, new Operator(RShift), new Reg(RegE), new Reg(RegD), new Reg(RegD));
+		prog.emit(Compute, new Operator(Mul), new Reg(RegD), new Reg(RegD), new Reg(RegD));
+		prog.emit(Branch, new Reg(RegD), new Target(globalLabel));
 		
-		if (type instanceof Array) {
-			Array array = (Array) type;
-
-			prog.emit(Const, new Value(0), new Reg(RegC));
-			
-			int size = 1;
-			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
-				prog.emit(Pop, new Reg(RegE));
-				prog.emit(Const, new Value(size), new Reg(RegD));
-				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
-				size *= array.indexSize.get(i);
-			}
-			
-			// Waarde mem[arp - offset]
-			// The +1 is to account for the length integer that resides at the arrays' address
-			System.out.println(((Array) checkResult.getType(ctx.ID())).isOuter());
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
-			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegC));
-			
-			Reach reach = checkResult.getReach(ctx.ID());
-			if (reach == Local) {
-				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegC), new Reg(RegB));
-				prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
-			} else if (reach == Global) {
-				prog.emit(Read, new MemAddr(RegC));
-				prog.emit(Receive, new Reg(RegE));
-			}
-		} else if (type instanceof AnyArray) {
-			AnyArray array = (AnyArray) type;
-			
-			// The first offset
-			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
-			prog.emit(Pop, new Reg(RegB));
-			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
-			
-			// C now holds the offset within the array
-			
-			if (array.elemType instanceof Array) {
-				// TODO: Implement this
-				System.out.println("Variable nested arrays not yet implemented");
-			} 
-
-			// We have the correct offset!
-
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
-			prog.emit(Const, new Value(1), new Reg(RegB));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
-			
-			// RegD contains if the array is global or not
-			// RegE contains the offset of the element
-			String stackLabel = Program.mkLbl(ctx, "stackLabel");
-			String doneLabel = Program.mkLbl(ctx, "finishedLabel");
-			
-			prog.emit(Compute, new Operator(Equal), new Reg(RegD), new Reg(Zero), new Reg(RegD));
-			prog.emit(Branch, new Reg(RegD), new Target(stackLabel));
-			prog.emit(Read, new MemAddr(RegE));
-			prog.emit(Receive, new Reg(RegE));
-			prog.emit(Jump, new Target(doneLabel));
-			prog.emit(stackLabel, Load, new MemAddr(RegE), new Reg(RegE)); // Was the ARP added?
-			prog.emit(doneLabel, Nop);
-			
-			// E contains the offset of the first array element. D contains whether or not it's a global array
-		}
+		// Stack pointer
+		prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegC), new Reg(RegE)); // E now contains the incremented value
+		prog.emit(Jump, new Target(endLabel));
 		
-		return null;
+		// Global pointer
+		prog.emit(globalLabel, Const, new Value(-2147483648), new Reg(RegD));
+		prog.emit(Compute, new Operator(Xor), new Reg(RegD), new Reg(RegE), new Reg(RegE));
+		prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegE), new Reg(RegE));
+		prog.emit(Compute, new Operator(Xor), new Reg(RegD), new Reg(RegE), new Reg(RegE));
+
+		prog.emit(endLabel, Nop);
 	}
 	
 	@Override
 	public List<Instr> visitIncExpr(IncExprContext ctx) {
-		visit(ctx.target());
+		visit(ctx.expr()); // E now contains the value in E and the address in D
 		
-		Reach reach = checkResult.getReach(ctx);
+		Type type = checkResult.getType(ctx);
 		
-		if (reach == Local) {
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
-			prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
-		} else if (reach == Global) {
-			prog.emit(Read, new MemAddr(RegE));
-			prog.emit(Receive, new Reg(RegC));
-		}
+		if (type instanceof Pointer) {
+			prog.emit(Push, new Reg(RegD));
+			
+			adjustPtrInE(ctx, ctx.PLUS().size());
 
-		prog.emit(Const, new Value(ctx.PLUS().size()), new Reg(RegD));
-		prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegD), new Reg(RegD));
-
-		if (reach == Local) {
-			prog.emit(Store, new Reg(RegD), new MemAddr(RegB));
-		} else if (reach == Global) {
-			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
+			prog.emit(endLabel, Pop, new Reg(RegD));
+		} else if (type instanceof Int || type instanceof Char) {
+			prog.emit(Const, new Value(ctx.PLUS().size()), new Reg(RegC));
+			prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegE), new Reg(RegE)); // E now contains the incremented value
 		}
 		
-		prog.emit(Compute, new Operator(Add), new Reg(Zero), new Reg(RegD), new Reg(RegE));
-
+		saveEinDerefD(ctx);
+		
 		return null;
 	}
 	
 	@Override
 	public List<Instr> visitDecExpr(DecExprContext ctx) {
-		visit(ctx.target());
+		visit(ctx.expr()); // E now contains the value in E and the address in D
 		
-		Reach reach = checkResult.getReach(ctx);
+		Type type = checkResult.getType(ctx);
 		
-		if (reach == Local) {
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegB));
-			prog.emit(Load, new MemAddr(RegB), new Reg(RegC));
-		} else if (reach == Global) {
-			prog.emit(Read, new MemAddr(RegE));
-			prog.emit(Receive, new Reg(RegC));
-		}
+		if (type instanceof Pointer) {
+			prog.emit(Push, new Reg(RegD));
+			
+			adjustPtrInE(ctx, -1 * ctx.MIN().size());
 
-		prog.emit(Const, new Value(ctx.MIN().size()), new Reg(RegD));
-		prog.emit(Compute, new Operator(Sub), new Reg(RegC), new Reg(RegD), new Reg(RegD));
-
-		if (reach == Local) {
-			prog.emit(Store, new Reg(RegD), new MemAddr(RegB));
-		} else if (reach == Global) {
-			prog.emit(Write, new Reg(RegD), new MemAddr(RegE));
+			prog.emit(endLabel, Pop, new Reg(RegD));
+		} else if (type instanceof Int || type instanceof Char) {
+			prog.emit(Const, new Value(-1 * ctx.MIN().size()), new Reg(RegC));
+			prog.emit(Compute, new Operator(Add), new Reg(RegC), new Reg(RegE), new Reg(RegE)); // E now contains the incremented value
 		}
+		
+		saveEinDerefD(ctx);
 
 		return null;
 	}
@@ -768,6 +815,11 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	@Override
 	public List<Instr> visitEqExpr(EqExprContext ctx) {
 		return emitArOp(ctx, Equal);
+	}
+	
+	@Override
+	public List<Instr> visitNeqExpr(NeqExprContext ctx) {
+		return emitArOp(ctx, NEq);
 	}
 	
 	@Override
@@ -812,15 +864,48 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitIdExpr(IdExprContext ctx) {
-		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegB));
+//		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegD));
+//		
+//		Reach reach = checkResult.getReach(ctx);
+//		if (reach == Local) {
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegD));
+//			prog.emit(Load, new MemAddr(RegD), new Reg(RegE));
+//		} else if (reach == Global) {
+//			prog.emit(Const, new Value(-2147483648), new Reg(RegC)); // Value of 32 bits: 1000...000
+//			prog.emit(Compute, new Operator(Or), new Reg(RegC), new Reg(RegD), new Reg(RegD)); // set the address bit to 1 to indicate global variable
+//			prog.emit(Read, new MemAddr(RegD));
+//			prog.emit(Receive, new Reg(RegE));
+//		} 
 		
+		int offset = checkResult.getOffset(ctx);
 		Reach reach = checkResult.getReach(ctx);
-		if (reach == Local) {
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegB), new Reg(RegB));
-			prog.emit(Load, new MemAddr(RegB), new Reg(RegE));
-		} else if (reach == Global) {
-			prog.emit(Read, new MemAddr(RegB));
-			prog.emit(Receive, new Reg(RegE));
+		Type type = checkResult.getType(ctx);
+		
+		prog.emit(Const, new Value(offset), new Reg(RegD));
+		
+		if (type instanceof Array) {
+			if (reach == Local) {
+				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegD));
+				prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(Zero), new Reg(RegE));
+			} else if (reach == Global) {
+				prog.emit(Const, new Value(-2147483648), new Reg(RegC)); // Value of 32 bits: 1000...000
+				prog.emit(Compute, new Operator(Or), new Reg(RegC), new Reg(RegD), new Reg(RegD)); // set the address bit to 1 to indicate global variable
+				prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(Zero), new Reg(RegE));
+			} else {
+				System.out.println("[Generator] Reach was not a defined value!");
+			}			
+		} else {
+			if (reach == Local) {
+				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegD));
+				prog.emit(Load, new MemAddr(RegD), new Reg(RegE));
+			} else if (reach == Global) {
+				prog.emit(Read, new MemAddr(RegD));
+				prog.emit(Receive, new Reg(RegE));
+				prog.emit(Const, new Value(-2147483648), new Reg(RegC)); // Value of 32 bits: 1000...000
+				prog.emit(Compute, new Operator(Or), new Reg(RegC), new Reg(RegD), new Reg(RegD)); // set the address bit to 1 to indicate global variable
+			} else {
+				System.out.println("[Generator] Reach was not a defined value!");
+			}
 		}
 		
 		return null;
@@ -829,27 +914,41 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	@Override
 	public List<Instr> visitNumExpr(NumExprContext ctx) {
 		prog.emit(Const, new Value(new Integer(ctx.NUM().getText())), new Reg(RegE));
+		prog.emit(Const, new Value(-1), new Reg(RegD)); // To properly guard against when RegD is used inappropriately
 		return null;
 	}
 	
 	@Override
 	public List<Instr> visitCharacterExpr(CharacterExprContext ctx) {
 		String c = ctx.CHARACTER().getText();
-		char ch = c.charAt(1);
-		int i = (int) ch;
-		prog.emit(Const, new Value(i), new Reg(RegE));
+		String cStrip = c.replaceAll("'", "");
+		
+		if (cStrip.equals("\\0")) {
+			prog.emit(Const, new Value(0), new Reg(RegE));
+		} else if (cStrip.equals("\\n")) {
+			prog.emit(Const, new Value("\n".charAt(0)), new Reg(RegE));
+		} else if (cStrip.length() == 1){
+			char ch = c.charAt(1);
+			int i = (int) ch;
+			prog.emit(Const, new Value(i), new Reg(RegE));
+		} 
+
+		prog.emit(Const, new Value(-1), new Reg(RegD));
+		
 		return null;
 	}
 	
 	@Override
 	public List<Instr> visitTrueExpr(TrueExprContext ctx) {
 		prog.emit(Const, new Value(1), new Reg(RegE));
+		prog.emit(Const, new Value(-1), new Reg(RegD));
 		return null;
 	}
 	
 	@Override
 	public List<Instr> visitFalseExpr(FalseExprContext ctx) {
 		prog.emit(Const, new Value(0), new Reg(RegE));
+		prog.emit(Const, new Value(-1), new Reg(RegD));
 		return null;
 	}
 	
@@ -857,12 +956,121 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public List<Instr> visitNegExpr(NegExprContext ctx) {
 		visit(ctx.expr());
 		prog.emit(Compute, new Operator(Sub), new Reg(Zero), new Reg(RegE), new Reg(RegE));
+		prog.emit(Const, new Value(-1), new Reg(RegD));
 		return null;
 	}
 	
 	@Override
 	public List<Instr> visitLiteralExpr(LiteralExprContext ctx) {
-		visit(ctx.getChild(0));
+		visit(ctx.litExpr());
+		prog.emit(Const, new Value(-1), new Reg(RegD)); // TODO: This may need to be changed when dealing what statically allocated arrays
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitDeferExpr(DeferExprContext ctx) {
+		int offset = checkResult.getOffset(ctx.ID());
+		Reach reach = checkResult.getReach(ctx.ID());
+		
+//		loadIdRegDE(offset, reach);
+//		prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(Zero), new Reg(RegE));
+
+		prog.emit(Const, new Value(offset), new Reg(RegE));
+		prog.emit(Const, new Value(-1), new Reg(RegD)); // The pointer does not actually have an address
+		
+		if (reach == Local) {
+			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+		} else if (reach == Global) {
+			prog.emit(Const, new Value(-2147483648), new Reg(RegC));
+			prog.emit(Compute, new Operator(Xor), new Reg(RegC), new Reg(RegE), new Reg(RegE));
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Dereferences an address (including address space bit) and puts the result in E. When it doubt, this needs ALL registers!
+	 * @param ctx A seed for the mkLbl function.
+	 */
+	public void derefEinE(ParserRuleContext ctx) {
+		String globalLabel = Program.mkLbl(ctx, "globalAssignment");
+		String endLabel = Program.mkLbl(ctx, "endAssignment");
+		
+		prog.emit(Const, new Value(31), new Reg(RegC));
+		prog.emit(Compute, new Operator(RShift), new Reg(RegE), new Reg(RegC), new Reg(RegC)); // C now contains -1 if it's global, 0 if it's local
+		prog.emit(Compute, new Operator(Mul), new Reg(RegC), new Reg(RegC), new Reg(RegC)); // C now contains 1 if it's global, 0 if it's local
+		prog.emit(Branch, new Reg(RegC), new Target(globalLabel));
+		
+		// It should be saved on stack
+		prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+		prog.emit(Jump, new Target(endLabel));
+		
+		// It should be saved on the heap
+		prog.emit(globalLabel, Const, new Value(-2147483648), new Reg(RegB));
+		prog.emit(Compute, new Operator(Xor), new Reg(RegB), new Reg(RegE), new Reg(RegE)); // RegE now contains the address without the address space bit
+		prog.emit(Read, new MemAddr(RegE));
+		prog.emit(Receive, new Reg(RegE));
+		prog.emit(endLabel, Nop);
+	}
+	
+	@Override
+	public List<Instr> visitDerefExpr(DerefExprContext ctx) {
+		visit(ctx.expr());
+		prog.emit(Push, new Reg(RegE));
+		derefEinE(ctx);
+		prog.emit(Pop, new Reg(RegD)); // Save the address that's gonna be in E in D, ofcourse
+
+		return null;
+	}
+	
+	@Override
+	public List<Instr> visitArrayExpr(ArrayExprContext ctx) {
+		Type left = checkResult.getType(ctx.expr(0));
+		Type right = checkResult.getType(ctx.expr(1));
+		
+		if (left instanceof Pointer && right instanceof Int) {
+			visit(ctx.expr(0));
+			prog.emit(Push, new Reg(RegE));
+			visit(ctx.expr(1));
+
+			Pointer ptr = (Pointer) left;
+			
+			prog.emit(Compute, new Operator(Add), new Reg(Zero), new Reg(RegE), new Reg(RegC));
+			prog.emit(Const, new Value(ptr.pointsTo.size()), new Reg(RegB));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+
+			prog.emit(Pop, new Reg(RegE));
+
+			adjustPtrInEToC(ctx);
+			
+			prog.emit(Compute, new Operator(Add), new Reg(Zero), new Reg(RegE), new Reg(RegD));
+			
+			if (checkResult.getAssignable(ctx)) {
+				derefEinE(ctx);
+			}			
+		} else if (left instanceof Array && right instanceof Int) {
+			visit(ctx.expr(0));
+			prog.emit(Push, new Reg(RegE));
+			visit(ctx.expr(1));
+
+			Array arr = (Array) left;
+			
+			prog.emit(Compute, new Operator(Add), new Reg(Zero), new Reg(RegE), new Reg(RegC));
+			prog.emit(Const, new Value(arr.elemType.size()), new Reg(RegB));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
+
+			prog.emit(Pop, new Reg(RegE));
+
+			adjustPtrInEToC(ctx);
+			
+			prog.emit(Compute, new Operator(Add), new Reg(Zero), new Reg(RegE), new Reg(RegD));
+			
+			if (checkResult.getAssignable(ctx)) {
+				derefEinE(ctx);
+			}
+		}
+		
+		
 		return null;
 	}
 	
@@ -892,24 +1100,24 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		for (ExprContext expr : ctx.expr()) {
 			Type type = checkResult.getType(expr);
 			
-			if (type instanceof Array) {
-				Reach reach = checkResult.getReach(expr);
-				
-				if (reach == Global) {
-					prog.emit(Const, new Value(1), new Reg(RegE));
-					prog.emit(Push, new Reg(RegE));
-					prog.emit(Const, new Value(checkResult.getOffset(expr)+1), new Reg(RegE));
-					prog.emit(Push, new Reg(RegE));
-				} else if (reach == Local) {
-					prog.emit(Push, new Reg(Zero));
-					prog.emit(Const, new Value(checkResult.getOffset(expr)), new Reg(RegE));
-					prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-					prog.emit(Push, new Reg(RegE));
-				}
-			} else {
+//			if (type instanceof Array) {
+//				Reach reach = checkResult.getReach(expr);
+//				
+//				if (reach == Global) {
+//					prog.emit(Const, new Value(1), new Reg(RegE));
+//					prog.emit(Push, new Reg(RegE));
+//					prog.emit(Const, new Value(checkResult.getOffset(expr)+1), new Reg(RegE));
+//					prog.emit(Push, new Reg(RegE));
+//				} else if (reach == Local) {
+//					prog.emit(Push, new Reg(Zero));
+//					prog.emit(Const, new Value(checkResult.getOffset(expr)), new Reg(RegE));
+//					prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+//					prog.emit(Push, new Reg(RegE));
+//				}
+//			} else {
 				visit(expr);
 				prog.emit(Push, new Reg(RegE));
-			}
+//			}
 		}
 		
 		// Push zero so the SP points to an EMPTY SLOT!
@@ -944,50 +1152,50 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	@Override
-	public List<Instr> visitLenExpr(LenExprContext ctx) {
-		Type type = checkResult.getType(ctx.ID());
-	
-		if (type instanceof AnyArray) {
-			String stackLabel = Program.mkLbl(ctx, "stackLabel");
-			String doneLabel = Program.mkLbl(ctx, "doneLabel");
-			
-			prog.emit(Const, new Value(1), new Reg(RegD)); // D contains 1
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE)); // E contains the anyarray address
-			
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegC)); // C contains whether or not it is global
-			
-			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-		
-			prog.emit(Compute, new Operator(Equal), new Reg(RegC), new Reg(Zero), new Reg(RegC));
-			prog.emit(Branch, new Reg(RegC), new Target(stackLabel));
-			// It's a global variable!
-			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // minus 1 to get at the integer that stores the size
-			prog.emit(Read, new MemAddr(RegE));
-			prog.emit(Receive, new Reg(RegE));
-			prog.emit(Jump, new Target(doneLabel));
-			
-			// It's a stack variable!
-			prog.emit(stackLabel, Compute, new Operator(Add), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // add 1 to get at the integer that stores the size (it's on the stack so we need to go towards 128)
-			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-			prog.emit(doneLabel, Nop);
-		} else if (type instanceof Array) {
-			Reach reach = checkResult.getReach(ctx.ID());
-			
-			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-			if (reach == Local) {
-				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-				prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-			} else if (reach == Global) {
-				prog.emit(Read, new MemAddr(RegE));
-				prog.emit(Receive, new Reg(RegE));
-			}
-		}
-		
-		return null;
-	}
+//	@Override
+//	public List<Instr> visitLenExpr(LenExprContext ctx) {
+//		Type type = checkResult.getType(ctx.ID());
+//	
+//		if (type instanceof AnyArray) {
+//			String stackLabel = Program.mkLbl(ctx, "stackLabel");
+//			String doneLabel = Program.mkLbl(ctx, "doneLabel");
+//			
+//			prog.emit(Const, new Value(1), new Reg(RegD)); // D contains 1
+//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE)); // E contains the anyarray address
+//			
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegC)); // C contains whether or not it is global
+//			
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+//		
+//			prog.emit(Compute, new Operator(Equal), new Reg(RegC), new Reg(Zero), new Reg(RegC));
+//			prog.emit(Branch, new Reg(RegC), new Target(stackLabel));
+//			// It's a global variable!
+//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // minus 1 to get at the integer that stores the size
+//			prog.emit(Read, new MemAddr(RegE));
+//			prog.emit(Receive, new Reg(RegE));
+//			prog.emit(Jump, new Target(doneLabel));
+//			
+//			// It's a stack variable!
+//			prog.emit(stackLabel, Compute, new Operator(Add), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // add 1 to get at the integer that stores the size (it's on the stack so we need to go towards 128)
+//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+//			prog.emit(doneLabel, Nop);
+//		} else if (type instanceof Array) {
+//			Reach reach = checkResult.getReach(ctx.ID());
+//			
+//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
+//			if (reach == Local) {
+//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
+//				prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
+//			} else if (reach == Global) {
+//				prog.emit(Read, new MemAddr(RegE));
+//				prog.emit(Receive, new Reg(RegE));
+//			}
+//		}
+//		
+//		return null;
+//	}
 	
 	@Override
 	public List<Instr> visitReturnStat(ReturnStatContext ctx) {
@@ -1094,103 +1302,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 				prog.emit(Jump, new Target(printBoolLabel));
 				prog.emit(returnLabel, Nop);
 			} else if (checkResult.getType(ctx.expr()).equals(new Type.Int())) {
-				if (printIntLabel == null) {
-					printIntLabel = "pipeOp_int";
-					
-					enterFunc(printIntLabel);
-					
-					Operator mod = new Operator(Mod);
-					Operator div = new Operator(Div);
-					Operator mul = new Operator(Mul);
-					Operator add = new Operator(Add);
-					
-					Reg numReg = new Reg(RegE);
-					Reg countReg = new Reg(RegB);
-					Reg orderReg = new Reg(RegD);
-					Reg workReg = new Reg(RegC);
-					
-					String begin = Program.mkLbl(ctx, "begin");
-					String unroll = Program.mkLbl(ctx, "unroll");
-					String beginUnroll = Program.mkLbl(ctx, "beginUnroll");
-					String done = Program.mkLbl(ctx, "done"); 
-					String again = Program.mkLbl(ctx, "again"); 
-					
-					// Starting values
-					prog.emit(printIntLabel, Const, new Value(10), orderReg);
-					prog.emit(Const, new Value(0), countReg);
-					
-					// Print minus if it's negative
-					prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
-					prog.emit(Branch, workReg, new Target(begin));
-					prog.emit(Const, new Value("-".charAt(0)), workReg);
-					prog.emit(Write, workReg, stdio);
-					prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
-					
-					// Take modulo of current value and save it on the stack
-					prog.emit(begin, Compute, mod, numReg, orderReg, workReg);
-					prog.emit(Push, workReg);
-					
-					// Divide current modulo by 10 to extract the current digit
-					// 12345 mod 10 => 5, 10 / 10 => 1, 5 div 1 = 5 (the digit)
-					// 12345 mod 100 => 45, 100 / 10 => 10, 45 div 10 => 4 (the digit)
-					prog.emit(Const, new Value(10), workReg);
-					prog.emit(Compute, div, orderReg, workReg, orderReg);
-					
-					// Retrieve the modulo'd current number
-					prog.emit(Pop, workReg);
-					
-					// Retrieve the current digit and save it on the stack for printing
-					prog.emit(Compute, div, workReg, orderReg, workReg);
-					prog.emit(Push, workReg);
-					
-					// Restore the modulo and increment the digit count 
-					prog.emit(Const, new Value(10), workReg);
-					prog.emit(Compute, mul, workReg, orderReg, orderReg);
-					prog.emit(Const, new Value(1), workReg);
-					prog.emit(Compute, add, workReg, countReg, countReg);
-					
-					// If current order is more than the number (or order == number, i.e. order
-					// == 10 and number == 10), we're finished
-					// Otherwise multiply the current order by 10 to go to the next digit
-					// And then jump to the beginning
-					prog.emit(Compute, new Operator(Equal), orderReg, numReg, workReg);
-					prog.emit(Branch, workReg, new Target(again));
-					prog.emit(Compute, new Operator(GtE), orderReg, numReg, workReg);
-					prog.emit(Branch, workReg, new Target(unroll));
-					prog.emit(again, Const, new Value(10), workReg);
-					prog.emit(Compute, mul, workReg, orderReg, orderReg);
-					prog.emit(Jump, new Target(begin));
-					
-					// Initialize registers for printing
-					Reg asciiReg = orderReg;
-					Reg oneReg = numReg;
-					prog.emit(unroll, Const, new Value(48), asciiReg);
-					prog.emit(Const, new Value(1), oneReg);
-					
-					// Get a digit
-					prog.emit(beginUnroll, Pop, workReg);
-					
-					// Convert it to ascii and decrement the digit count
-					prog.emit(Compute, new Operator(Sub), countReg, oneReg, countReg);
-					prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
-					
-					// Output it
-//					prog.emit(Write, workReg, new MemAddr("stdio"));
-					prog.emit(Write, workReg, stdio);
-					
-					// If all digits have been written to stdio, we're done
-					prog.emit(Compute, new Operator(Equal), new Reg(Zero), countReg, workReg);
-					prog.emit(Branch, workReg, new Target(done));
-					
-					// Otherwise, print another digit
-					prog.emit(Jump, new Target(beginUnroll));
-					
-					// Emit done label here
-					prog.emit(done, Pop, new Reg(RegE));
-					prog.emit(Jump, new Target(RegE));
-					
-					leaveFunc();
-				}
+				includePrintInt(ctx);
 				
 				String returnLabel = Program.mkLbl(ctx, "intreturn");
 
@@ -1220,7 +1332,63 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 				prog.emit(Push, new Reg(RegD));	
 				prog.emit(Jump, new Target(printCharLabel));
 				prog.emit(returnLabel, Nop);
-			} else {
+			} else if (checkResult.getType(ctx.expr()) instanceof Type.Pointer) { 
+				includePrintInt(ctx);
+
+				Type type = checkResult.getType(ctx.expr());
+
+				if (printPointerLabel == null) {
+					printPointerLabel = "pipeOp_pointer";
+					
+					String globalLabel = Program.mkLbl(ctx, "pipeOp_global");
+					String endLabel = Program.mkLbl(ctx, "pipeOp_end");
+					
+					enterFunc(printPointerLabel);
+					
+					prog.emit(printPointerLabel, Const, new Value(31), new Reg(RegD));
+					prog.emit(Compute, new Operator(RShift), new Reg(RegE), new Reg(RegD), new Reg(RegD));
+					prog.emit(Compute, new Operator(Mul), new Reg(RegD), new Reg(RegD), new Reg(RegD));
+					prog.emit(Branch, new Reg(RegD), new Target(globalLabel));
+					
+					for (char c : "local".toCharArray()) {
+						prog.emit(Const, new Value(c), new Reg(RegD));
+						prog.emit(Write, new Reg(RegD), stdio);
+					}
+					
+					prog.emit(Jump, new Target(endLabel));
+					
+					prog.emit(globalLabel, Nop);
+					
+					for (char c : "global".toCharArray()) {
+						prog.emit(Const, new Value(c), new Reg(RegD));
+						prog.emit(Write, new Reg(RegD), stdio);
+					}
+
+					prog.emit(Const, new Value(-2147483648), new Reg(RegD));
+					prog.emit(Compute, new Operator(Xor), new Reg(RegE), new Reg(RegD), new Reg(RegE));
+					
+					String loopLabel = Program.mkLbl(ctx, "loopLabel");
+					prog.emit(endLabel, Pop, new Reg(RegB));
+					prog.emit(Const, new Value("_".toCharArray()[0]), new Reg(RegC));
+					prog.emit(loopLabel, Const, new Value(1), new Reg(RegD));
+					prog.emit(Write, new Reg(RegC), stdio);
+					prog.emit(Compute, new Operator(Sub), new Reg(RegB), new Reg(RegD), new Reg(RegB));
+					prog.emit(Compute, new Operator(NEq), new Reg(RegB), new Reg(Zero), new Reg(RegD));
+					prog.emit(Branch, new Reg(RegD), new Target(loopLabel));
+					
+					prog.emit(Jump, new Target(printIntLabel));
+					
+					leaveFunc();
+				}
+				
+				String returnLabel = Program.mkLbl(ctx, "printPointerReturn");
+				prog.emit(Const, new Value(returnLabel), new Reg(RegC));
+				prog.emit(Push, new Reg(RegC));	
+				prog.emit(Const, new Value(((Pointer) type).getDepth()), new Reg(RegC));
+				prog.emit(Push, new Reg(RegC));
+				prog.emit(Jump, new Target(printPointerLabel));
+				prog.emit(returnLabel, Nop);
+			}else{
 				System.out.println("Unsupported type given to stdout " + ctx.getText());
 				return null;
 			}
@@ -1238,6 +1406,108 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		}
 		
 		return null;
+	}
+	
+	public void includePrintInt(ParserRuleContext ctx) {
+		if (printIntLabel == null) {
+			printIntLabel = "pipeOp_int";
+			
+			enterFunc(printIntLabel);
+			
+			Operator mod = new Operator(Mod);
+			Operator div = new Operator(Div);
+			Operator mul = new Operator(Mul);
+			Operator add = new Operator(Add);
+			
+			Reg numReg = new Reg(RegE);
+			Reg countReg = new Reg(RegB);
+			Reg orderReg = new Reg(RegD);
+			Reg workReg = new Reg(RegC);
+			
+			String begin = Program.mkLbl(ctx, "begin");
+			String unroll = Program.mkLbl(ctx, "unroll");
+			String beginUnroll = Program.mkLbl(ctx, "beginUnroll");
+			String done = Program.mkLbl(ctx, "done"); 
+			String again = Program.mkLbl(ctx, "again"); 
+			
+			// Starting values
+			prog.emit(printIntLabel, Const, new Value(10), orderReg);
+			prog.emit(Const, new Value(0), countReg);
+			
+			// Print minus if it's negative
+			prog.emit(Compute, new Operator(LtE), new Reg(Zero), numReg, workReg);
+			prog.emit(Branch, workReg, new Target(begin));
+			prog.emit(Const, new Value("-".charAt(0)), workReg);
+			prog.emit(Write, workReg, stdio);
+			prog.emit(Compute, new Operator(Sub), new Reg(Zero), numReg, numReg);
+			
+			// Take modulo of current value and save it on the stack
+			prog.emit(begin, Compute, mod, numReg, orderReg, workReg);
+			prog.emit(Push, workReg);
+//			prog.emit(Const, new Value(100), workReg);
+//			prog.emit(Write, workReg, stdio);
+			
+			// Divide current modulo by 10 to extract the current digit
+			// 12345 mod 10 => 5, 10 / 10 => 1, 5 div 1 = 5 (the digit)
+			// 12345 mod 100 => 45, 100 / 10 => 10, 45 div 10 => 4 (the digit)
+			prog.emit(Const, new Value(10), workReg);
+			prog.emit(Compute, div, orderReg, workReg, orderReg);
+			
+			// Retrieve the modulo'd current number
+			prog.emit(Pop, workReg);
+			
+			// Retrieve the current digit and save it on the stack for printing
+			prog.emit(Compute, div, workReg, orderReg, workReg);
+			prog.emit(Push, workReg);
+			
+			// Restore the modulo and increment the digit count 
+			prog.emit(Const, new Value(10), workReg);
+			prog.emit(Compute, mul, workReg, orderReg, orderReg);
+			prog.emit(Const, new Value(1), workReg);
+			prog.emit(Compute, add, workReg, countReg, countReg);
+			
+			// If current order is more than the number (or order == number, i.e. order
+			// == 10 and number == 10), we're finished
+			// Otherwise multiply the current order by 10 to go to the next digit
+			// And then jump to the beginning
+			prog.emit(Compute, new Operator(Equal), orderReg, numReg, workReg);
+			prog.emit(Branch, workReg, new Target(again));
+			prog.emit(Compute, new Operator(GtE), orderReg, numReg, workReg);
+			prog.emit(Branch, workReg, new Target(unroll));
+			prog.emit(again, Const, new Value(10), workReg);
+			prog.emit(Compute, mul, workReg, orderReg, orderReg);
+			prog.emit(Jump, new Target(begin));
+			
+			// Initialize registers for printing
+			Reg asciiReg = orderReg;
+			Reg oneReg = numReg;
+			prog.emit(unroll, Const, new Value(48), asciiReg);
+			prog.emit(Const, new Value(1), oneReg);
+			
+			// Get a digit
+			prog.emit(beginUnroll, Pop, workReg);
+			
+			// Convert it to ascii and decrement the digit count
+			prog.emit(Compute, new Operator(Sub), countReg, oneReg, countReg);
+			prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
+			
+			// Output it
+//					prog.emit(Write, workReg, new MemAddr("stdio"));
+			prog.emit(Write, workReg, stdio);
+			
+			// If all digits have been written to stdio, we're done
+			prog.emit(Compute, new Operator(Equal), new Reg(Zero), countReg, workReg);
+			prog.emit(Branch, workReg, new Target(done));
+			
+			// Otherwise, print another digit
+			prog.emit(Jump, new Target(beginUnroll));
+			
+			// Emit done label here
+			prog.emit(done, Pop, new Reg(RegE));
+			prog.emit(Jump, new Target(RegE));
+			
+			leaveFunc();
+		}
 	}
 	
 	@Override

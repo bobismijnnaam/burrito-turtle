@@ -21,6 +21,7 @@ POW: '**';
 IMPORT: 'pls';
 
 EQ: '==';
+NEQ: '~=';
 LT: '<';
 GT: '>';
 LTE: '<=';
@@ -42,7 +43,10 @@ RPAR: ')';
 LBRA: '[';
 RBRA: ']';
 
-CHARACTER: '\'' (~'\'' | '\\' '\'') '\''; 
+CHARACTER: '\'' (~'\'' | '\\' '\'') '\'' | '\'\\0\'' | '\'\\n\''; 
+STRING: '"' (~'"' | '\\' '"')* '"';
+// STRING: '"' ([^\\"]+ | '\\.')* '"';
+//STRING: (["'])(?:(?=(\\?))\2.)*?\1; 
 PATH: '"' (~'"' | '""')* '"';
 AND: '&&';
 OR: '||';
@@ -54,9 +58,9 @@ CHAR: 'char';
 LOCKT: 'Lock';
 VOID: 'void';
 AUTO: '$';
-LOCAL: '&';
-GLOBAL: '*';
-DEREF: '_';
+// LOCAL: '&';
+// GLOBAL: '*';
+PTR: '_';
 
 TRUE: ('t' | 'T') 'rue';
 FALSE: ('f' | 'F') 'alse';

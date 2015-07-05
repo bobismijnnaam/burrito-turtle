@@ -215,7 +215,6 @@ public class Sprockell {
 		try {
 			return new Scanner(file, "UTF-8" ).useDelimiter("\\A").next();
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;

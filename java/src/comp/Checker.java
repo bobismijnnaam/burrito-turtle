@@ -1,13 +1,14 @@
 package comp;
 
+import static sprockell.Operator.Which.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import lang.BurritoBaseListener;
 import lang.BurritoParser.AndExprContext;
-import lang.BurritoParser.AnyArrayArgContext;
+import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayExprContext;
-import lang.BurritoParser.ArrayTargetContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.AssStatContext;
 import lang.BurritoParser.BlockContext;
@@ -16,6 +17,7 @@ import lang.BurritoParser.CharTypeContext;
 import lang.BurritoParser.CharacterExprContext;
 import lang.BurritoParser.DecExprContext;
 import lang.BurritoParser.DeclContext;
+import lang.BurritoParser.DerefExprContext;
 import lang.BurritoParser.DivAssStatContext;
 import lang.BurritoParser.DivExprContext;
 import lang.BurritoParser.EqExprContext;
@@ -26,12 +28,10 @@ import lang.BurritoParser.FuncExprContext;
 import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
-import lang.BurritoParser.IdTargetContext;
 import lang.BurritoParser.IfStatContext;
 import lang.BurritoParser.ImpContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
-import lang.BurritoParser.LenExprContext;
 import lang.BurritoParser.LitExprContext;
 import lang.BurritoParser.LiteralExprContext;
 import lang.BurritoParser.LockStatContext;
@@ -44,17 +44,19 @@ import lang.BurritoParser.ModExprContext;
 import lang.BurritoParser.MulAssStatContext;
 import lang.BurritoParser.MulExprContext;
 import lang.BurritoParser.NegExprContext;
+import lang.BurritoParser.NeqExprContext;
 import lang.BurritoParser.NotExprContext;
 import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.OrExprContext;
 import lang.BurritoParser.OutStatContext;
 import lang.BurritoParser.ParExprContext;
-import lang.BurritoParser.PlainArgContext;
 import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
+import lang.BurritoParser.PointerTypeContext;
 import lang.BurritoParser.PowExprContext;
 import lang.BurritoParser.SigContext;
 import lang.BurritoParser.StartStatContext;
+import lang.BurritoParser.StringExprContext;
 import lang.BurritoParser.SwitchStatContext;
 import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.TypeAssignStatContext;
@@ -69,8 +71,15 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import comp.Type.AnyArray;
+import sprockell.Operator;
+
 import comp.Type.Array;
+import comp.Type.Bool;
+import comp.Type.Char;
+import comp.Type.Int;
+import comp.Type.Pointer;
+import comp.Type.StringLiteral;
+import comp.Type.Void;
 
 public class Checker extends BurritoBaseListener {
 	
@@ -120,18 +129,23 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitDecl(DeclContext ctx) {
 		String id = ctx.ID().getText();
-		Type type = result.getType(ctx.type());
+		Type type = scope.type(ctx.ID().getText());
 
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
 		
+		// TODO: Sprint => Sprockkel In Time
+		
 		if (ctx.expr() != null) {
-			if (!type.assignable()) {
-				addError(ctx, "It is prohibited to assign a value to type " + type);
+			if (getType(ctx.expr()) instanceof StringLiteral) {}
+			else {
+				if (!type.assignable()) {
+					addError(ctx, "It is prohibited to assign a value to type " + type);
+					return;
+				}
+				
+				checkType(ctx.expr(), type);
 			}
-			
-			setType(ctx.ID(), type);		
-			checkType(ctx.expr(), type);
 		}	
 	}
 	
@@ -178,22 +192,12 @@ public class Checker extends BurritoBaseListener {
 	};
 	
 	@Override
-	public void exitPlainArg(PlainArgContext ctx) {
+	public void exitArg(ArgContext ctx) {
 		String argID = ctx.ID().getText();
 		Type argType = getType(ctx.type());
 
 		scope.recordArg(argID, argType);
 
-		setType(ctx, argType);
-	}
-	
-	@Override
-	public void exitAnyArrayArg(AnyArrayArgContext ctx) {
-		String argID = ctx.ID().getText();
-		Type argType = new AnyArray(getType(ctx.type()));
-		
-		scope.recordArg(argID, argType);
-		
 		setType(ctx, argType);
 	}
 	
@@ -252,7 +256,7 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitVoidType(VoidTypeContext ctx) {
-		setType(ctx, new Type.Char());
+		setType(ctx, new Type.Void());
 	}
 	
 	@Override
@@ -261,63 +265,26 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	@Override
+	public void exitPointerType(PointerTypeContext ctx) {
+		Type type = getType(ctx.type());
+		setType(ctx, new Type.Pointer(type));
+	}
+	
+	@Override
 	public void exitArrayType(ArrayTypeContext ctx) {
-		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
-		
-		if (getType(ctx.type()) instanceof Type.Array) {
-			Type.Array innerArray = (Array) getType(ctx.type());
-			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
+		Type left = getType(ctx.type());
+		int size = -1;
+		if (ctx.NUM() != null) {
+			size = new Integer(ctx.NUM().getText());
 		}
-		
-		array.indexSize.add(new Integer(ctx.NUM().getText()));
-		setType(ctx, array);
-	}
-	
-	@Override
-	public void exitIdTarget(IdTargetContext ctx) {
-		String id = ctx.ID().getText();
 
-		setType(ctx, scope.type(id));
-		if (checkType(ctx, getType(ctx))) {
-			setOffset(ctx, scope.offset(id));
-			setReach(ctx, scope.reach(id));
-		}
-	}
-	
-	@Override
-	public void exitArrayTarget(ArrayTargetContext ctx) {
-		String id = ctx.ID().getText();
-		Type type = scope.type(id);
-		if (type instanceof Type.Array) {
-			Type.Array array = (Array) type;
-
-			if (array == null) {
-				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-			} else {
-				setType(ctx.ID(), array);
-				setType(ctx, array.getBaseType());
-				setOffset(ctx.ID(), this.scope.offset(id));
-				setReach(ctx, this.scope.reach(id));
-				
-				for (ExprContext expr : ctx.expr()) {
-					checkType(expr, new Type.Int());
-				}
-			}
-		} else if (type instanceof Type.AnyArray) {
-			AnyArray array = (AnyArray) type;
-			
-			if (array == null) {
-				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-			} else {
-				setType(ctx.ID(), array);
-				setType(ctx, array);
-				setOffset(ctx.ID(), this.scope.offset(id));
-				setReach(ctx, this.scope.reach(id));
-				
-				for (ExprContext expr : ctx.expr()) {
-					checkType(expr, new Type.Int());
-				}
-			}
+		if (left instanceof Array) {
+			Array right = new Array(new Void(), size); // Void will be filled in later
+			((Array) left).insertLayer(right);
+			setType(ctx, left);
+		} else {
+			Array arr = new Array(left, size);
+			setType(ctx, arr);
 		}
 	}
 	
@@ -340,17 +307,36 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitCharacterExpr(CharacterExprContext ctx) {
 		setType(ctx, new Type.Char());
+
+		String c = ctx.CHARACTER().getText();
+		String cStrip = c.replaceAll("'", "");
+		
+		if (cStrip.equals("\\0")) {
+		} else if (cStrip.equals("\\n")) {
+		} else if (cStrip.length() == 1){
+		} else {
+			addError(ctx, "Invalid character literal: " + ctx.getText());
+		}
+	}
+	
+	@Override
+	public void exitStringExpr(StringExprContext ctx) {
+		StringLiteral sl = new StringLiteral();
+		sl.content = ctx.getText().substring(1, ctx.getText().length() - 1);
+		setType(ctx, sl);
 	}
 	
 	@Override
 	public void exitNegExpr(NegExprContext ctx) {
 		checkType(ctx.expr(), new Type.Int());
 		setType(ctx, new Type.Int());
+		setAssignable(ctx, false);
 	}
 	
 	@Override
 	public void exitLiteralExpr(LiteralExprContext ctx) {
-		setType(ctx, getType(ctx.getChild(0)));
+		setType(ctx, getType(ctx.litExpr()));
+		setAssignable(ctx, false);
 	}
 	
 	@Override
@@ -358,131 +344,160 @@ public class Checker extends BurritoBaseListener {
 		String id = ctx.getText();
 		Type type = this.scope.type(id);
 		
-		setType(ctx, type);
-		if (checkType(ctx, type)) {
-			setOffset(ctx, this.scope.offset(id));
-			setReach(ctx, this.scope.reach(id));
+		if (!scope.contains(id)) {
+			addError(ctx, "Variable " + id + " not declared");
+			setType(ctx, null);
+			setOffset(ctx, -1);
+			setReach(ctx, Reach.Local);
+			setAssignable(ctx, false);
+			return;
 		}
+		
+		setType(ctx, type);
+		setOffset(ctx, this.scope.offset(id)); 
+		setReach(ctx, this.scope.reach(id)); 
+		setAssignable(ctx, true);
+
+//		if (checkType(ctx, type)) { // This looks like bollocks
+//		}
 	}
 	
 	@Override
 	public void exitParExpr(ParExprContext ctx) {
 		setType(ctx, getType(ctx.expr()));
+		setAssignable(ctx, getAssignable(ctx.expr()));
 	}
 	
-	@Override
-	public void exitArrayExpr(ArrayExprContext ctx) {
-		String id = ctx.ID().getText();
-		Type type = scope.type(id);
-		
-		if (type instanceof Type.Array) {
-			Type.Array array = (Array) this.scope.type(id);
-			if (array == null) {
-				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-			} else {
-				setType(ctx.ID(), array);
-				
-				setType(ctx, array.getBaseType());
-				setOffset(ctx.ID(), this.scope.offset(id));
-				setReach(ctx.ID(), this.scope.reach(id));
-				for (ExprContext expr : ctx.expr())
-					checkType(expr, new Type.Int()); 
-			}
-		} else if (type instanceof Type.AnyArray) {
-			AnyArray array = (AnyArray) this.scope.type(id);
-			if (array == null) {
-				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-			} else {
-				setType(ctx.ID(), array);
-				
-				setType(ctx, array.getBaseType());
-				setOffset(ctx.ID(), this.scope.offset(id));
-				setReach(ctx.ID(), this.scope.reach(id));
-				for (ExprContext expr : ctx.expr()) {
-					checkType(expr, new Type.Int()); 
-				}
-			}			
-		}
-	}
+//	@Override
+//	public void exitArrayExpr(ArrayExprContext ctx) {
+//		String id = ctx.ID().getText();
+//		Type type = scope.type(id);
+//		
+//		if (type instanceof Type.Array) {
+//			Type.Array array = (Array) this.scope.type(id);
+//			if (array == null) {
+//				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+//			} else {
+//				setType(ctx.ID(), array);
+//				
+//				setType(ctx, array.getBaseType());
+//				setOffset(ctx.ID(), this.scope.offset(id));
+//				setReach(ctx.ID(), this.scope.reach(id));
+//				for (ExprContext expr : ctx.expr())
+//					checkType(expr, new Type.Int()); 
+//			}
+//		} else if (type instanceof Type.AnyArray) {
+//			AnyArray array = (AnyArray) this.scope.type(id);
+//			if (array == null) {
+//				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
+//			} else {
+//				setType(ctx.ID(), array);
+//				
+//				setType(ctx, array.getBaseType());
+//				setOffset(ctx.ID(), this.scope.offset(id));
+//				setReach(ctx.ID(), this.scope.reach(id));
+//				for (ExprContext expr : ctx.expr()) {
+//					checkType(expr, new Type.Int()); 
+//				}
+//			}			
+//		}
+//	}
 	
 	@Override
 	public void exitIncExpr(IncExprContext ctx) {
-		String id = ctx.target().getText();
-
-		Type type = this.scope.type(id);
-		setType(ctx, type);
-		
-		if (!(type instanceof Type.Int || type instanceof Type.Char)) {
-			addError(ctx, "Type " + type + " is not incrementable");
+		Type type = getType(ctx.expr());
+		if (!getAssignable(ctx.expr()) || !(type instanceof Type.Int || type instanceof Type.Char || type instanceof Type.Pointer)) {
+			addError(ctx, "Can't increment target " + ctx.expr().getText());
+			return;
 		}
+		setAssignable(ctx, false);
 		
-		setOffset(ctx, this.scope.offset(id));
-		setReach(ctx, this.scope.reach(id));
+		setType(ctx, type);
 	}
 	
 	@Override
 	public void exitDecExpr(DecExprContext ctx) {
-		String id = ctx.target().getText();
+		Type type = getType(ctx.expr());
+		if (!getAssignable(ctx.expr()) || !(type instanceof Type.Int || type instanceof Type.Char || type instanceof Type.Pointer)) {
+			addError(ctx, "Can't decrement target " + ctx.expr().getText());
+			return;
+		}
 
-		Type type = this.scope.type(id);
+		setAssignable(ctx, false);
 		setType(ctx, type);
-		checkType(ctx, new Type.Int());
-		setOffset(ctx, this.scope.offset(id));
-		setReach(ctx, this.scope.reach(id));
 	}
 	
 	@Override
 	public void exitGtExpr(GtExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Int());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), false);
 	}
 	
 	@Override
 	public void exitLtExpr(LtExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Int());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), false);
 	}
 	
 	@Override
 	public void exitEqExpr(EqExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Int());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), false);
+	}
+	
+	@Override
+	public void exitNeqExpr(NeqExprContext ctx) {
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), false);
 	}
 	
 	@Override
 	public void exitLteExpr(LteExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Int());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), false);
 	}
 	
 	@Override
 	public void exitGteExpr(GteExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Int()); 
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), true); 
 	}
 	
 	@Override
 	public void exitAndExpr(AndExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Bool());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), true);
 	}
 	
 	@Override
 	public void exitOrExpr(OrExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Bool());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), true);
 	}
 	
 	@Override
 	public void exitXorExpr(XorExprContext ctx) {
-		checkTypeCompare(ctx, new Type.Bool());
+		checkTypeCompare(ctx.expr(0), ctx.expr(1), true);
 	}
 	
-	void checkTypeCompare(ParserRuleContext ctx, Type desired) {
-		System.out.println(ctx.getChild(0).getText());
-		System.out.println(ctx.getChild(2).getText());
-		Type type1 = getType(ctx.getChild(0));
-		Type type2 = getType(ctx.getChild(2));
-		checkType((ParserRuleContext) ctx.getChild(0), type2);
-		checkType((ParserRuleContext) ctx.getChild(2), type1);
-		if (!(type1.equals(desired) && type2.equals(desired))) {
-			addError(ctx, "Left or right hand side does not match. Found: " + type1 + " and " + type2 + ", expected " + desired);
+	// Proper addition/subtraction for pointers
+	void checkTypeCompare(ExprContext leftExpr, ExprContext rightExpr, boolean boolOp) {
+		Type left = getType(leftExpr);
+		Type right = getType(rightExpr);
+		ParserRuleContext ctx = (ParserRuleContext) leftExpr.parent;
+
+		if (!left.equals(right)) {
+			addError(ctx, "Left and right hand side types do not match:"
+					+ left
+					+ " =/= "
+					+ right);
+			return;
 		}
 		
+		if (boolOp) {
+			if (!(left instanceof Bool)) {
+				addError(ctx, "Cannot do a boolean operation on type " + left);
+			}
+		} else {
+			if (!(left instanceof Char || left instanceof Int || left instanceof Pointer)) {
+				addError(ctx, "Cannot do compare operation on type " + left);
+			}
+		}
+
 		setType(ctx, new Type.Bool());
+		setAssignable(ctx, false);
 	}
 	
 	@Override
@@ -502,12 +517,28 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitPlusExpr(PlusExprContext ctx) {
-		checkTypeOp(ctx);
+		Type left = getType(ctx.expr(0));
+		Type right = getType(ctx.expr(1));
+
+		if (left instanceof Pointer && right instanceof Int) {
+			setType(ctx, left);
+			setAssignable(ctx, false);
+		} else {
+			checkTypeOp(ctx);
+		}
 	}
 	
 	@Override
 	public void exitMinExpr(MinExprContext ctx) {
-		checkTypeOp(ctx);
+		Type left = getType(ctx.expr(0));
+		Type right = getType(ctx.expr(1));
+		
+		if (left instanceof Pointer && right instanceof Int) {
+			setType(ctx, left);
+			setAssignable(ctx, false);
+		} else {
+			checkTypeOp(ctx);
+		}
 	}
 	
 	@Override
@@ -519,12 +550,23 @@ public class Checker extends BurritoBaseListener {
 	public void exitNotExpr(NotExprContext ctx) {
 		checkType(ctx.expr(), new Type.Bool());
 		setType(ctx, new Type.Bool());
+		setAssignable(ctx, false);
 	}
 	
 	void checkTypeOp(ParserRuleContext ctx) {
-		checkType((ParserRuleContext) ctx.getChild(0), new Type.Int());
-		checkType((ParserRuleContext) ctx.getChild(2), new Type.Int());
-		setType(ctx, new Type.Int());
+		Type left = getType(ctx.getChild(0));
+		Type right = getType(ctx.getChild(2));
+		
+		if (!(left instanceof Int || left instanceof Char)
+				|| !(right instanceof Int || right instanceof Char)){
+			addError(ctx, "Left and right operand types are not equal: "
+					+ left
+					+ " =/= "
+					+ right);
+		} else {
+			setType(ctx, left);
+			setAssignable(ctx, false);
+		}
 	}
 	
 	@Override
@@ -543,7 +585,12 @@ public class Checker extends BurritoBaseListener {
 		Type[] callArgs = new Type[ctx.expr().size()];
 		for (int i = 0; i < ctx.expr().size(); i++) {
 			callArgs[i] = getType(ctx.expr(i));
+			
+			if (callArgs[i] instanceof Array) {
+				callArgs[i] = new Pointer(((Array) callArgs[i]).elemType);
+			}
 		}
+
 		Function.Overload overload = func.getOverload(callArgs); 
 		if (overload == null) {
 			addError(ctx, "No appropriate overload found for function \"" + func.id + "\". Available overloads are: " + func);
@@ -553,27 +600,83 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx, scope.func(funcID).returnType);
 		// Attach the function to the ID for the generator
 		setFunction(ctx.ID(), overload);
+		setAssignable(ctx, false);
 	}
 	
 	@Override
-	public void exitLenExpr(LenExprContext ctx) {
+	public void exitArrayExpr(ArrayExprContext ctx) {
+		Type left = getType(ctx.expr(0));
+		Type right = getType(ctx.expr(1));
+		
+		if (left instanceof Pointer && right instanceof Int) {
+			setType(ctx, ((Pointer) left).pointsTo);
+			setAssignable(ctx, true);
+		} else if (left instanceof Array && right instanceof Int) {
+			Type inner = ((Array) left).elemType;
+			setType(ctx, inner);
+
+			if (inner instanceof Array) {
+				setAssignable(ctx, false);
+			} else {
+				setAssignable(ctx, true);
+			}
+		} else {
+			addError(ctx, "Cannot do array indexing on types " + left + " and " + right);
+			return;
+		}
+	}
+	
+//	@Override
+//	public void exitLenExpr(LenExprContext ctx) {
+//		String id = ctx.ID().getText();
+//		Type type = scope.type(id);
+//
+//		if (!((type instanceof Type.Array) || (type instanceof Type.AnyArray))) {
+//			addError(ctx, "len can only be used with arrays");
+//		}
+//		
+//		if (!scope.contains(id)) {
+//			addError(ctx,  "Variable " + id + " not defined");
+//			return;
+//		}
+//		
+//		setType(ctx, new Type.Int());
+//		setType(ctx.ID(), type);
+//		setOffset(ctx.ID(), scope.offset(id));
+//		setReach(ctx.ID(), scope.reach(id));
+//	}
+	
+	@Override
+	public void exitDerefExpr(DerefExprContext ctx) {
+		Type left = getType(ctx.expr());
+		if (!(left instanceof Type.Pointer)) {
+			addError(ctx, "Cannot dereference expression " + ctx.getText());
+			return;
+		} else {
+			setType(ctx, ((Type.Pointer) left).pointsTo);
+			setAssignable(ctx, true);
+		}
+	}
+	
+	@Override
+	public void exitDeferExpr(lang.BurritoParser.DeferExprContext ctx) {
 		String id = ctx.ID().getText();
 		Type type = scope.type(id);
-
-		if (!((type instanceof Type.Array) || (type instanceof Type.AnyArray))) {
-			addError(ctx, "len can only be used with arrays");
-		}
 		
 		if (!scope.contains(id)) {
-			addError(ctx,  "Variable " + id + " not defined");
+			addError(ctx, "Variable not declared: " + id);
 			return;
 		}
 		
-		setType(ctx, new Type.Int());
 		setType(ctx.ID(), type);
-		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
-	}
+		setOffset(ctx.ID(), scope.offset(id));
+
+		setType(ctx, new Type.Pointer(type));
+		setAssignable(ctx, false);
+	};
+	
+	
 	
 	// STATS ----------------------------
 	
@@ -584,7 +687,10 @@ public class Checker extends BurritoBaseListener {
 		
 		Type type = getType(ctx.expr());
 		
-		if (!(type instanceof Type.Int || type instanceof Type.Bool || type instanceof Type.Char)) {
+		if (!(type instanceof Type.Int
+				|| type instanceof Type.Bool
+				|| type instanceof Type.Char
+				|| type instanceof Type.Pointer)) {
 			addError(ctx, "Pipe operator does not support type " + type);
 		}
 	}
@@ -602,18 +708,47 @@ public class Checker extends BurritoBaseListener {
 	
 	@Override
 	public void exitTypeAssignStat(TypeAssignStatContext ctx) {
-		// TODO: Handle arrays
 		String id = ctx.ID().getText();
 		Type type = result.getType(ctx.type());
 		
-		if (!type.assignable()) {
-			addError(ctx, "It's prohibited to assign a value to something of type " + type);
+		if (type instanceof Array) {
+			Array arr = (Array)	type;
+			if (arr.elemType instanceof Char && arr.size == -1) {
+				if (ctx.expr() == null) {
+					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+					return;
+				}
+				
+				Type lit = getType(ctx.expr());
+				
+				if (lit instanceof StringLiteral) {
+					StringLiteral sl = (StringLiteral) lit;
+					((Array) type).size = sl.content.length() + 1; // + 1 is for null terminator
+				} else {
+					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+					return;
+				}
+			} else {
+				if (arr.isIncomplete()) {
+					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+					return;
+				} else if (!arr.assignable()) {
+					addError(ctx, "It's prohibited to assign a value to something of type " + type);
+					return;
+				}
+			}
+		} else {
+			if (!type.assignable()) {
+				addError(ctx, "It's prohibited to assign a value to something of type " + type);
+				return;
+			}
+
+			setType(ctx.ID(), type);	
+			checkType(ctx.expr(), type);
 		}
 		
 		scope.put(id, type);
-
-		setType(ctx.ID(), type);	
-		checkType(ctx.expr(), type);
+		
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
 	}
@@ -626,13 +761,9 @@ public class Checker extends BurritoBaseListener {
 		if (type instanceof Type.Lock) {
 			addError(ctx, "Declaring a lock in local scope is prohibited");
 		}
-		
-		if (type instanceof Type.Array) {
-			((Type.Array) type).setOuter();
-		}
-		
+	
 		scope.put(id, type);
-		
+
 		setType(ctx.ID(), type);		
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
@@ -652,62 +783,65 @@ public class Checker extends BurritoBaseListener {
 	// += -= /= *= stats
 	@Override
 	public void exitPlusAssStat(PlusAssStatContext ctx) {
-		checkAssignment(ctx);
+		assChecker(ctx.expr(0), ctx.expr(1), Operator.Which.Add);
 	}
 	
 	@Override
 	public void exitMinAssStat(MinAssStatContext ctx) {
-		checkAssignment(ctx);
+		assChecker(ctx.expr(0), ctx.expr(1), Operator.Which.Sub);
 	}
 	
 	@Override
 	public void exitDivAssStat(DivAssStatContext ctx) {
-		checkAssignment(ctx);
+		assChecker(ctx.expr(0), ctx.expr(1), Operator.Which.Div);
 	}
 	
 	@Override
 	public void exitMulAssStat(MulAssStatContext ctx) {
-		checkAssignment(ctx);
-	}
-	
-	private void checkAssignment(ParseTree ctx) {
-		String id = ctx.getChild(0).getText();
-		
-		Type type = getType(ctx.getChild(0));
-		if (type instanceof Type.Array) {
-			type = ((Array) type).getBaseType();
-		}
-		
-		if (type != null) {
-			if (!type.assignable()) {
-				addError((ParserRuleContext) ctx, "It is prohibited to assign a value to type " + type);
-			}
-			
-			if (checkType((ParserRuleContext) ctx.getChild(3), type)) {
-				setOffset((ParserRuleContext) ctx.getChild(0), scope.offset(id));
-				setReach(ctx, scope.reach(id));
-			}
-		} else {
-			addError((ParserRuleContext) ctx.getChild(0), "Missing inferred type of " + ctx.getChild(0).getText());
-		}
+		assChecker(ctx.expr(0), ctx.expr(1), Operator.Which.Mul);
 	}
 	
 	@Override
 	public void exitAssStat(AssStatContext ctx) {
-		Type type = getType(ctx.target());
+		assChecker(ctx.expr(0), ctx.expr(1), Operator.Which.Equal);
+	}
+	
+	public void assChecker(ExprContext target, ExprContext param, Operator.Which modus) {
+		Type left = getType(target);
+		Type right = getType(param);
 		
-		if (type != null) {
-			if (type instanceof AnyArray) {
-				Type typeLeft = ((AnyArray) type).getBaseType();
-				Type typeRight = getType(ctx.expr());
-				if (!typeLeft.equals(typeRight)) {
-					addError(ctx, "Expected type " + typeLeft + " but found type " + typeRight);
-				}
+		if ((left instanceof Char || left instanceof Int || left instanceof Bool) && (right instanceof Char || right instanceof Int || right instanceof Bool)) {
+			// Fine
+		} else if (left instanceof Pointer && right instanceof Int) {
+			if (modus == Equal || modus == Add || modus == Sub) {}
+			else {
+				addError(target, "Cannot perform operator "
+						+ modus.toString().replaceAll("Equal", "Assignment")
+						+ " on pointer " + target.getText());
+			}
+		} else if (left instanceof Pointer && right instanceof Pointer) {
+			// Fine
+		} else if (left instanceof Pointer && right instanceof Array && modus == Equal) {
+			Pointer ptr = (Pointer) left;
+			Array arr = (Array) right;
+			if (ptr.pointsTo.equals(arr.elemType)) {
+				// Fine
 			} else {
-				checkType(ctx.expr(), type);
+				addError(target, "Cannot perform operator Assignment on types " + left + " and " + right);
 			}
 		} else {
-			addError(ctx.target(), "Missing inferred type of " + ctx.target().getText());
+			// Not fine!
+			addError((ParserRuleContext) target.parent, "Cannot perform operator "
+					+ modus.toString().replaceAll("Equal", "Assignment")
+					+ " on types "
+					+ left
+					+ " and "
+					+ right);
+		}
+		
+		if (!getAssignable(target)) {
+			addError(target, "Can't assign to expression " + target.getText());
+			return;
 		}
 	}
 	
@@ -847,5 +981,13 @@ public class Checker extends BurritoBaseListener {
 	
 	public Reach getReach(ParseTree node) {
 		return this.result.getReach(node);
+	}
+	
+	public void setAssignable(ParseTree node, boolean assign) {
+		result.setAssignable(node, assign);
+	}
+	
+	public boolean getAssignable(ParseTree node) {
+		return result.getAssignable(node);
 	}
 }

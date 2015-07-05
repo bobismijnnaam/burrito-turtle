@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lang.BurritoBaseVisitor;
-import lang.BurritoParser.AnyArrayArgContext;
 import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.BoolTypeContext;
@@ -12,10 +11,12 @@ import lang.BurritoParser.CharTypeContext;
 import lang.BurritoParser.DeclContext;
 import lang.BurritoParser.FuncContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LiteralExprContext;
 import lang.BurritoParser.LockTypeContext;
-import lang.BurritoParser.PlainArgContext;
+import lang.BurritoParser.PointerTypeContext;
 import lang.BurritoParser.ProgramContext;
 import lang.BurritoParser.SigContext;
+import lang.BurritoParser.StringExprContext;
 import lang.BurritoParser.VoidTypeContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -24,7 +25,11 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
 import sprockell.Program;
+
 import comp.Type.Array;
+import comp.Type.Char;
+import comp.Type.StringLiteral;
+import comp.Type.Void;
 
 /**
  * Does an initial scan of the tree to collect functions and global variable declarations
@@ -69,16 +74,47 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	@Override
 	public Integer visitDecl(DeclContext ctx) {
 		visit(ctx.type());
-		
+
 		String id = ctx.ID().getText();
 		Type type = getType(ctx.type());
 		
-		if (type instanceof Array) {
-			((Array) type).setOuter();
+		if (ctx.expr() != null) {
+			visit(ctx.expr());
+			
+			if (type instanceof Array) {
+				Array arr = (Array) type;
+				if (arr.elemType instanceof Char && arr.size == -1) {
+					Type exprType = getType(ctx.expr());
+					if (exprType instanceof StringLiteral) {
+						StringLiteral sl = (StringLiteral) exprType;
+						arr.size = sl.content.length() + 1;
+					} else {
+						addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+					}
+				} else if (arr.isIncomplete()) {
+					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+				}
+			}
 		}
 		
         scope.putGlobal(id, type);
+        setType(ctx.ID(), type);
 
+		return 0;
+	}
+
+	@Override
+	public Integer visitLiteralExpr(LiteralExprContext ctx) {
+		visit(ctx.litExpr());
+		setType(ctx, getType(ctx.litExpr()));
+		return 0;
+	}
+
+	@Override
+	public Integer visitStringExpr(StringExprContext ctx) {
+		StringLiteral sl = new StringLiteral();
+		sl.content = ctx.getText().substring(1, ctx.getText().length() - 1);
+		setType(ctx, sl);
 		return 0;
 	}
 	
@@ -117,19 +153,10 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	}
 	
 	@Override 
-	public Integer visitPlainArg(PlainArgContext ctx) {
+	public Integer visitArg(ArgContext ctx) {
 		visit(ctx.type());
 		setType(ctx, getType(ctx.type()));
 
-		return 0;
-	}
-	
-	@Override
-	public Integer visitAnyArrayArg(AnyArrayArgContext ctx) {
-		visit(ctx.type());
-		Type arrType = new Type.AnyArray(getType(ctx.type()));
-		setType(ctx, arrType);
-		
 		return 0;
 	}
 	
@@ -166,21 +193,52 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	}
 	
 	@Override
+	public Integer visitPointerType(PointerTypeContext ctx) {
+		visit(ctx.type());
+
+		setType(ctx, new Type.Pointer(getType(ctx.type())));
+		
+		return 0;
+	}
+
+	@Override
 	public Integer visitArrayType(ArrayTypeContext ctx) {
 		visit(ctx.type());
 		
-		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
-		if (getType(ctx.type()).toString().equals("Array")) {
-			Type.Array innerArray = (Array) getType(ctx.type());
-			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
+		Type left = getType(ctx.type());
+		int size = -1; 
+		
+		if (ctx.NUM() != null)
+			size = new Integer(ctx.NUM().getText());
+
+		if (left instanceof Array) {
+			Array right = new Array(new Void(), size); // Void will be filled in later
+			((Array) left).insertLayer(right);
+			setType(ctx, left);
+		} else {
+			Array arr = new Array(left, size);
+			setType(ctx, arr);
 		}
 		
-		array.indexSize.add(new Integer(ctx.NUM().getText()));
-
-		setType(ctx, array);
-
-		return 0;
+		return null;
 	}
+	
+//	@Override
+//	public Integer visitArrayType(ArrayTypeContext ctx) {
+//		visit(ctx.type());
+//		
+//		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
+//		if (getType(ctx.type()).toString().equals("Array")) {
+//			Type.Array innerArray = (Array) getType(ctx.type());
+//			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
+//		}
+//		
+//		array.indexSize.add(new Integer(ctx.NUM().getText()));
+//
+//		setType(ctx, array);
+//
+//		return 0;
+//	}
 
 	private void setType(ParseTree node, Type type) {
 		types.put(node, type);

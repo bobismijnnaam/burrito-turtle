@@ -108,70 +108,17 @@ abstract public class Type {
 		}
 	}
 	
+	/**
+	 * Gosh
+	 *
+	 */
 	static public class Array extends Type {
 		public Type elemType;
-		private int size;
-		public List<Integer> indexSize;
-		private boolean outer = false;
+		public int size;
 		
 		public Array(Type elemType, int size) {
 			this.elemType = elemType;
 			this.size = size;
-			this.indexSize = new ArrayList<Integer>();
-		}
-		
-		@Override
-		public boolean assignable() {
-			return false;
-		}
-		
-		public Type getBaseType() {
-			if (elemType instanceof Array) {
-				return ((Array) elemType).getBaseType();
-			} else {
-				return elemType;
-			}
-		}
-
-		@Override
-		public int size() {
-			if (outer)
-				return elemType.size() * size + 1;
-			else
-				return elemType.size() * size;
-		}
-		
-		/**
-		 * @return The amount of elements in this array
-		 */
-		public int length() {
-			return size;
-		}
-
-		@Override
-		public String toString() {
-			return "array of " + elemType.toString();
-		}
-		
-		public void setOuter() {
-			outer = true;
-		}
-		
-		public boolean isOuter() {
-			return outer;
-		}
-	}
-	
-	/**
-	 * The first integer contains whether it is global or not: false is local, true is global. The second integer contains the absolute address.
-	 * @author Bob
-	 *
-	 */
-	static public class AnyArray extends Type {
-		public Type elemType;
-		
-		AnyArray(Type elemType) {
-			this.elemType = elemType;
 		}
 		
 		public Type getBaseType() {
@@ -182,9 +129,18 @@ abstract public class Type {
 			}
 		}
 		
+		public void insertLayer(Array arr) {
+			if (elemType instanceof Array) {
+				((Array) elemType).insertLayer(arr);
+			} else {
+				arr.elemType = elemType;
+				elemType = arr;
+			}
+		}
+		
 		@Override
 		public int size() {
-			return 2;
+			return size * elemType.size();
 		}
 
 		@Override
@@ -194,17 +150,43 @@ abstract public class Type {
 		
 		@Override
 		public String toString() {
-			return "array with any amount of " + elemType.toString();
+			if (size >= 0) {
+				return "array with " + size + " of " + elemType;
+			} else {
+				return "incomplete array of " + elemType;
+			}
 		}
 		
 		@Override
 		public boolean equals(Object other) {
-			if (other instanceof AnyArray) {
-				return elemType.equals(((AnyArray) other).elemType);
-			} else if (other instanceof Array) {
-				return elemType.equals(((Array) other).elemType);
-			}
+			if (other instanceof Array) {
+				return elemType.equals(((Array) other).elemType) && size == ((Array) other).size;
+			} 
 			
+			return false;
+		}
+		
+		public boolean isIncomplete() {
+			if (elemType instanceof Array) {
+				return size < 0 || ((Array) elemType).isIncomplete();
+			} else {
+				return size < 0;
+			}
+		}
+	}
+	
+	static public class StringLiteral extends Type {
+		public String content;
+
+		@Override
+		public int size() {
+			// TODO Auto-generated method stub
+			return -1;
+		}
+
+		@Override
+		public boolean assignable() {
+			// TODO Auto-generated method stub
 			return false;
 		}
 	}
@@ -229,6 +211,30 @@ abstract public class Type {
 		@Override
 		public boolean assignable() {
 			return true;
+		}
+		
+		public int getDepth() {
+			if (pointsTo instanceof Pointer) {
+				return 1 + ((Pointer) pointsTo).getDepth();
+			} else {
+				return 1;
+			}
+		}
+		
+		public void setBaseType(Type type) {
+			if (pointsTo instanceof Pointer) {
+				((Pointer) pointsTo).setBaseType(type);
+			} else {
+				pointsTo = type;
+			}
+		}
+		
+		public boolean equals(Object other) {
+			if (other instanceof Pointer) {
+				return ((Pointer) other).pointsTo.equals(pointsTo);
+			}
+			
+			return false;
 		}
 	}
 }

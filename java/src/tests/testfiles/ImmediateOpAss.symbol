@@ -1,5 +1,6 @@
 void program()
 	int i = 0;
+	
 	i += 4;
 	i|;
 	i *= 10;
@@ -8,5 +9,6 @@ void program()
 	i|;
 	i -= 4;
 	i|;
+
 	<-;
 .

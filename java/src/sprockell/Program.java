@@ -28,7 +28,8 @@ public class Program {
 	public static String mkLbl(ParserRuleContext node, String prefix) {
 		int line = node.getStart().getLine();
 		int column = node.getStart().getCharPositionInLine();
-		return prefix + "-" + line + ":" + column;
+		int end = column + node.getText().length();
+		return prefix + "-" + line + ":" + column + "-" + end;
 	}
 	
 	/**

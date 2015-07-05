@@ -1,11 +1,9 @@
 package tests;
 
 import static org.junit.Assert.*;
-
-import java.io.FileNotFoundException;
-
 import lang.BurritoLexer;
 import lang.BurritoParser;
+import lang.BurritoParser.TypeStatContext;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
@@ -15,16 +13,30 @@ import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
-import sprockell.Program;
 import comp.Checker;
 import comp.Collector;
-import comp.Generator;
 import comp.ParseException;
 import comp.Result;
 import comp.Scope;
 import comp.Type;
  
 public class CheckerTest {
+	
+	@Test
+	public void arrayTypeTests() {
+		String testProgram = "void program() int[6]_ a; int[7] b; int[5][2] c; int[3][2][5][6] d; int[2][3][5][7] e; <-; .";
+
+		ParseTree result = parse(testProgram);
+		Checker checker = new Checker();
+		Collector collector = new Collector();
+		
+		try {
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
+		} catch (ParseException e) {
+			System.out.println(e);
+		}
+	}
 	
 	@Test
 	public void functionTests() {

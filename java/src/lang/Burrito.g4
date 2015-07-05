@@ -2,23 +2,21 @@ grammar Burrito;
 
 import BurritoVocab; 
 
-program: (func | decl | imp)*;
+program: (func | decl | imp)*;  
 
-imp: IMPORT PATH SEMI;
-decl: type ID (ASS expr)? SEMI;
+imp: IMPORT PATH SEMI;  
+decl: type ID (ASS expr)? SEMI; 
 	
 func: sig stat* END;
 sig: type NOT? ID LPAR (arg (COMMA arg)*)? RPAR;
-arg: type ID			#plainArg
-	| type LBRA RBRA ID	#anyArrayArg
-	;
+arg: type ID;
 
 stat: type ID ASS expr SEMI						#typeAssignStat 
-	| target ASS expr SEMI						#assStat
-	| target PLUS ASS expr SEMI					#plusAssStat
-	| target MIN ASS expr SEMI					#minAssStat
-	| target MUL ASS expr SEMI					#mulAssStat
-	| target DIV ASS expr SEMI					#divAssStat
+	| expr PLUS ASS expr SEMI					#plusAssStat
+	| expr MIN ASS expr SEMI					#minAssStat
+	| expr MUL ASS expr SEMI					#mulAssStat
+	| expr DIV ASS expr SEMI					#divAssStat
+	| expr ASS expr SEMI						#assStat
 	| expr IF block (ELSE block)? END			#ifStat
 	| expr WHILE block END						#whileStat
 	| type ID SEMI								#typeStat
@@ -34,14 +32,16 @@ stat: type ID ASS expr SEMI						#typeAssignStat
 
 block: stat*;
 
-target: ID								#idTarget 
-	| ID (LBRA expr RBRA)+				#arrayTarget
-	| ID DEREF+							#ptrTarget
-	; 
+//target://  ID								#idTarget 
+//	// | ID (LBRA expr RBRA)+				#arrayTarget
+//	| expr								#exprTarget
+//	; 
+
+// target: expr;   
  
 expr: NOT expr								#notExpr
-	| target (PLUS)+						#incExpr
-	| target (MIN)+							#decExpr
+	| expr (PLUS)+							#incExpr
+	| expr (MIN)+							#decExpr
 	| expr DIV expr							#divExpr
 	| expr MUL expr							#mulExpr
 	| expr POW expr							#powExpr
@@ -49,6 +49,7 @@ expr: NOT expr								#notExpr
 	| expr PLUS expr						#plusExpr
 	| expr MIN expr							#minExpr
 	| expr EQ expr							#eqExpr
+	| expr NEQ expr							#neqExpr
 	| expr LT expr							#ltExpr
 	| expr GT expr							#gtExpr
 	| expr LTE expr							#lteExpr
@@ -61,14 +62,16 @@ expr: NOT expr								#notExpr
 	| litExpr								#literalExpr
 	| MIN expr								#negExpr
 	| ID LPAR (expr (COMMA expr)*)? RPAR	#funcExpr
-	| ID (LBRA expr RBRA)+					#arrayExpr
-	| LENGTH LPAR ID RPAR					#lenExpr
+	| expr PTR								#derefExpr
+	| PTR ID								#deferExpr
+	| expr LBRA expr RBRA 					#arrayExpr
 	;
 	
 litExpr: NUM								#numExpr
 	| CHARACTER								#characterExpr
 	| TRUE									#trueExpr
 	| FALSE 								#falseExpr
+	| STRING								#stringExpr
 	;
 
 type: INT					#intType 
@@ -76,7 +79,8 @@ type: INT					#intType
 	| CHAR					#charType
 	| LOCKT					#lockType
 	| VOID					#voidType	
-	| type LBRA NUM RBRA	#arrayType  
+	| type PTR				#pointerType
+	| type LBRA NUM? RBRA	#arrayType  
 	;
 	
 newlines: IONL*;

@@ -1,0 +1,20 @@
+void println(char_ chr)
+	chr_ ~= '\0' @
+		chr_|;
+		chr += 1; 
+	.
+
+	<-;
+.
+	
+char[6] msg;
+char[] helloWorld = "Hello world!";
+
+void program()
+	char[] helloCountry = "Hello country!";
+	char[6] other;
+	
+	println(helloCountry);
+	
+	<-;
+.

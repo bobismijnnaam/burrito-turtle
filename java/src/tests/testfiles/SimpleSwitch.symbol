@@ -1,13 +1,14 @@
 void program()
 	int x = 2;
+
 	>> Switch int test
 	returnIf123(x)|;
 	
-	>> Switch char test
+	>> >> Switch char test
 	char c = 'b';
 	returnIfAbc(c)|;
 	
-	>> Switch bool test
+	>> >> Switch bool test
 	bool b = true;
 	switchBool(b)|;
 	
@@ -25,6 +26,8 @@ int returnIf123(int x)
 		any:
 			<- 0;
 	.
+	
+	<- 0;
 .
 
 char returnIfAbc(char c) 
@@ -38,6 +41,8 @@ char returnIfAbc(char c)
 		any:
 			<- ' ';
 	.
+	
+	<- 'x';
 .
 
 bool switchBool(bool b) 
@@ -49,4 +54,6 @@ bool switchBool(bool b)
 		any:
 			<- false;
 	.
+	
+	<- false;
 .

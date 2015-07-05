@@ -15,6 +15,7 @@ public class Result {
 	private final ParseTreeProperty<Function.Overload> functions = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Integer> stackSizes = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Reach> reaches = new ParseTreeProperty<>();
+	private final ParseTreeProperty<Boolean> assignables = new ParseTreeProperty<>(); 
 	
 	private int globalSize;
 	private int sprockells;
@@ -76,6 +77,14 @@ public class Result {
 	
 	public Reach getReach(ParseTree node) {
 		return this.reaches.get(node);
+	}
+	
+	public void setAssignable(ParseTree node, boolean assignable) {
+		this.assignables.put(node,  assignable);
+	}
+	
+	public boolean getAssignable(ParseTree node) {
+		return assignables.get(node);
 	}
 	
 	/**
