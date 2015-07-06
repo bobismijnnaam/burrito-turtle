@@ -13,6 +13,8 @@ import java.util.Scanner;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.junit.Test;
 
+import comp.ParseException;
+
 import sprockell.Program;
 import sprockell.Sprockell;
 
@@ -95,9 +97,6 @@ public class SprockellTest {
 	
 	@Test
 	public void simpleWhile() {
-		Program program = Sprockell.scaryCompileFile(BASE_DIR, "SimpleWhile.symbol");
-		System.out.println(program.prettyString(0, true));
-
 		String output = "0123456789";
 		String result = compileAndRunFile("SimpleWhile");
 		assertNotNull("Compiling or executing went wrong", result);
@@ -234,16 +233,11 @@ public class SprockellTest {
 	}
 	
 	@Test
-	public void importTest() {
-		// TODO: Fix this!
-		// compile file with imports
+	public void importTest() throws ParseException {
 		String result = compileImportAndRun(new File(BASE_DIR, "Import" + EXT), 1);
-		System.out.println(result);
+		assertNotNull("Compiling or importing went wrong");
+		assertSanitized("44040", result);
 	}
-	
-	/**
-	 * Utility functions
-	 */
 	
 	public static String compileAndRun(String progStr, int cores) {
 		return compileAndRun(new ANTLRInputStream(progStr), cores);
@@ -275,8 +269,6 @@ public class SprockellTest {
 	
 	public static String compileAndRun(ANTLRInputStream input, int cores) {
 		Program prog = Sprockell.compile(input);
-		//System.out.println(prog.prettyString(0, true));
-		//int file = 5;
 		
 		if (prog == null) {
 			System.out.println("There were errors");
@@ -314,7 +306,7 @@ public class SprockellTest {
 		}	
 	}
 	
-	public static String compileImportAndRun(File file, int cores) {
+	public static String compileImportAndRun(File file, int cores) throws ParseException {
 		Program prog = Sprockell.compileImport(file);
 		
 		if (prog == null) {

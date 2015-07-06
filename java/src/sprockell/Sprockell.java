@@ -131,21 +131,31 @@ public class Sprockell {
 
 		TokenStream tokens = new CommonTokenStream(lexer);
 		BurritoParser parser = new BurritoParser(tokens);
-		ParseTree result = parser.program();
 		parser.removeErrorListeners();
 		parser.addErrorListener(listener);
+		ParseTree result = parser.program();
 		
 		Collector funCol = new Collector();
 		Checker checker = new Checker();
 		Generator generator = new Generator();
 
 		try {
-			Scope scope = funCol.generate(result);
-			Result checkResult = checker.check(result, scope);
-			Program prog = generator.generate(result, checkResult);
-
 			// If errors, an exception will be thrown
 			listener.throwException();
+			
+			Scope scope = funCol.generate(result);
+			
+			if (funCol.hasErrors()) {
+				throw new ParseException(funCol.getErrors());
+			}
+			
+			Result checkResult = checker.check(result, scope);
+			
+			if (checker.hasErrors()) {
+				throw new ParseException(checker.getErrors());
+			}
+			
+			Program prog = generator.generate(result, checkResult);
 
 			if (!prog.isWellFormed()) {
 				System.out.println("Program is not well formed");
@@ -165,7 +175,13 @@ public class Sprockell {
 		}
 	}
 	
-	public static Program compileImport(File file) {
+	/**
+	 * Compiles a program with imports
+	 * @param file
+	 * @return
+	 * @throws ParseException 
+	 */
+	public static Program compileImport(File file) throws ParseException {
 		// Get the first string of file
 		String input = getStringFromFile(file);
 		String path = file.getAbsolutePath();
@@ -175,7 +191,16 @@ public class Sprockell {
 		return compile(fileWithImports);
 	}
 	
-	public static String concatFile(String givenInput, String path, List<String> handledImports) {
+	/**
+	 * Recursively imports a file if it's not imported yet. When a file is imported it should
+	 * appear in the handledImports arraylist.
+	 * @param givenInput The current imported file
+	 * @param path The source of importing relative to the first file
+	 * @param handledImports List of already imported files
+	 * @return The full concatted program
+	 * @throws ParseException 
+	 */
+	public static String concatFile(String givenInput, String path, List<String> handledImports) throws ParseException {
 		String totalInput = givenInput;
 		
 		// read the file
@@ -188,9 +213,11 @@ public class Sprockell {
 
 		TokenStream tokens = new CommonTokenStream(lexer);
 		BurritoParser parser = new BurritoParser(tokens);
-		ParseTree result = parser.program();
 		parser.removeErrorListeners();
 		parser.addErrorListener(listener);
+		ParseTree result = parser.program();
+		
+		listener.throwException();
 		
 		Importer imp = new Importer(result);
 		

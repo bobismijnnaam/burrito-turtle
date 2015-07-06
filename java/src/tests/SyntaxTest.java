@@ -11,10 +11,13 @@ import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
 
+import comp.ErrorListener;
+import comp.ParseException;
+
 public class SyntaxTest {
 	
 	@Test
-	public void expressionsCorrect() {
+	public void expressionsCorrect() throws ParseException {
 		String testProgram = "void program() int a = 0; int b = 3 * 3; bool c = 1 == 1; int d = (3+3)*3; <-; .";
 		parse(testProgram);
 		
@@ -34,8 +37,8 @@ public class SyntaxTest {
 		parse(testProgram);
 	}
 	
-	@Test
-	public void expressionsWrong() {
+	@Test (expected=ParseException.class) 
+	public void expressionsWrong() throws ParseException {
 		// forget semicolomn
 		String testProgram = "void program() int a = 0 <-; .";
 		parse(testProgram);
@@ -50,7 +53,7 @@ public class SyntaxTest {
 	}
 	
 	@Test
-	public void controlFlowCorrect() {
+	public void controlFlowCorrect() throws ParseException {
 		// IF ELSE
 		String testProgram = "void program() int a = 0; a == 0 ? a|; ! a = 3; . <-; .";
 		parse(testProgram);
@@ -70,8 +73,8 @@ public class SyntaxTest {
 		parse(testProgram);
 	}
 	
-	@Test
-	public void controlFlowWrong() {
+	@Test (expected=ParseException.class) 
+	public void controlFlowWrong() throws ParseException {
 		// wrongly placed if symbol
 		String testProgram = "void program() int a = 0; ? a == 0 a|; ! a = 3; . <-; .";
 		parse(testProgram);
@@ -86,7 +89,7 @@ public class SyntaxTest {
 	}
 	
 	@Test
-	public void dataTypeCorrect() {
+	public void dataTypeCorrect() throws ParseException {
 		// one dimension array
 		String testProgram = "void program() int[] a = [1, 2, 3, 4]; <-; .";
 		parse(testProgram);
@@ -103,15 +106,15 @@ public class SyntaxTest {
 		parse(testProgram);
 	}
 	
-	@Test
-	public void dataTypeWrong() {
+	@Test (expected=ParseException.class) 
+	public void dataTypeWrong() throws ParseException {
 		// wrong array init
 		String testProgram = "void program() int a[] = [1, 2, 3, 4]; <-; .";
 		parse(testProgram);
 	}
 	
 	@Test
-	public void concurrencyCorrect() {
+	public void concurrencyCorrect() throws ParseException {
 		// threads
 		String testProgram = "void~ thread1() . void program() -> thread1; <-; .";
 		parse(testProgram);
@@ -121,8 +124,8 @@ public class SyntaxTest {
 		parse(testProgram);
 	}
 	
-	@Test
-	public void concurrencyWrong() {
+	@Test (expected=ParseException.class) 
+	public void concurrencyWrong() throws ParseException {
 		String testProgram = "~void thread1() . void program() -> thread1; <-; .";
 		parse(testProgram);
 		
@@ -131,7 +134,7 @@ public class SyntaxTest {
 	}
 	
 	@Test
-	public void importCorrect() {
+	public void importCorrect() throws ParseException {
 		String testProgram = "pls \"ruben\"; void program() .";
 		parse(testProgram);
 		
@@ -139,8 +142,8 @@ public class SyntaxTest {
 		parse(testProgram);
 	}
 	
-	@Test
-	public void importWrong() {
+	@Test (expected=ParseException.class) 
+	public void importWrong() throws ParseException {
 		String testProgram = "pls ruben; void program() .";
 		parse(testProgram);
 	}
@@ -148,13 +151,26 @@ public class SyntaxTest {
 	/**
 	 * @param testProgram the string input to parse
 	 * @return the generated ParseTree from the string
+	 * @throws ParseException 
 	 */
-	private ParseTree parse(String testProgram) {
+	private ParseTree parse(String testProgram) throws ParseException {
+		ErrorListener listener = new ErrorListener();
+
 		CharStream input = new ANTLRInputStream(testProgram);
 		Lexer lexer = new BurritoLexer(input);
+		lexer.removeErrorListeners();
+		lexer.addErrorListener(listener);
+		
 		TokenStream tokens = new CommonTokenStream(lexer);
 		BurritoParser parser = new BurritoParser(tokens);
-		return parser.program();
+		parser.removeErrorListeners();
+		parser.addErrorListener(listener);
+		
+		ParseTree result = parser.program();
+		
+		listener.throwException();
+		
+		return result;
 	}
 	
 }
