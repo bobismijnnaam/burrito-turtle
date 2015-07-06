@@ -276,7 +276,7 @@ public class SprockellTest {
 	public static String compileAndRun(ANTLRInputStream input, int cores) {
 		Program prog = Sprockell.compile(input);
 		//System.out.println(prog.prettyString(0, true));
-		int file = 5;
+		//int file = 5;
 		
 		if (prog == null) {
 			System.out.println("There were errors");
@@ -292,6 +292,7 @@ public class SprockellTest {
 
 			InputStream is = buildPr.getInputStream();
 			
+			@SuppressWarnings("resource")
 			Scanner s = new Scanner(is).useDelimiter("\\A");
 		    return s.hasNext() ? s.next() : "";
 		} catch (FileNotFoundException e) {
@@ -330,6 +331,7 @@ public class SprockellTest {
 
 			InputStream is = buildPr.getInputStream();
 			
+			@SuppressWarnings("resource")
 			Scanner s = new Scanner(is).useDelimiter("\\A");
 		    return s.hasNext() ? s.next() : "";
 		} catch (FileNotFoundException e) {

@@ -1,8 +1,5 @@
 package comp;
 
-import java.util.ArrayList;
-import java.util.List;
-
 abstract public class Type {
 	public static final int INT_SIZE = 1;
 	

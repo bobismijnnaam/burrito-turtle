@@ -80,7 +80,6 @@ import sprockell.Value;
 
 import comp.Type.Array;
 import comp.Type.ArrayLiteral;
-import comp.Type.Bool;
 import comp.Type.Char;
 import comp.Type.Int;
 import comp.Type.Pointer;
@@ -337,7 +336,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		visit(param); // E now contains the usable value
 		
 		Type left = checkResult.getType(target);
-		Type right = checkResult.getType(param);
+		//Type right = checkResult.getType(param);
 		
 		if (left instanceof Pointer) {
 			Pointer ptr = (Pointer) left; 
@@ -651,7 +650,7 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	private List<Instr> emitArOp(ParserRuleContext ctx, Operator.Which op) {
 		Type left = checkResult.getType(ctx.getChild(0));
-		Type right = checkResult.getType(ctx.getChild(1));
+		//Type right = checkResult.getType(ctx.getChild(1));
 		
 		if (left instanceof Pointer) {
 			Pointer ptr = (Pointer) left;

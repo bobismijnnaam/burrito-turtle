@@ -5,9 +5,6 @@ import static tests.SprockellTest.*;
 
 import org.junit.Test;
 
-import sprockell.Program;
-import sprockell.Sprockell;
-
 public class ConcurrencyTest {
 	@Test
 	public void petersons() {

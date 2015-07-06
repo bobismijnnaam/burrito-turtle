@@ -1,12 +1,6 @@
 package tests;
 
-import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
 
 import org.junit.Test;
 
@@ -18,7 +12,7 @@ public class GeneratorTest {
 	
 	@Test
 	public void slow() throws FileNotFoundException {
-		int cores = 1;
+		//int cores = 1;
 		
 		Program prog = null;
 		try {

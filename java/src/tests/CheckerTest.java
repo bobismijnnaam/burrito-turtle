@@ -3,7 +3,6 @@ package tests;
 import static org.junit.Assert.*;
 import lang.BurritoLexer;
 import lang.BurritoParser;
-import lang.BurritoParser.TypeStatContext;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
@@ -32,7 +31,7 @@ public class CheckerTest {
 		
 		try {
 			Scope scope = collector.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 			System.out.println(e);
 		}
@@ -47,7 +46,7 @@ public class CheckerTest {
 		
 		try {
 			Scope scope = collector.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 		}
 
@@ -58,7 +57,7 @@ public class CheckerTest {
 		
 		try {
 			Scope scope = collector.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
@@ -158,7 +157,7 @@ public class CheckerTest {
 		collector = new Collector();
 		try {
 			Scope scope = collector.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 			
 		}
@@ -172,7 +171,7 @@ public class CheckerTest {
 		collector = new Collector();
 		try {
 			Scope scope = collector.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 		}
 		
@@ -186,7 +185,7 @@ public class CheckerTest {
 		collector = new Collector();
 		try {
 			Scope scope = collector.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 		}
 		
@@ -257,7 +256,7 @@ public class CheckerTest {
 
 		try {
 			Scope scope = funCol.generate(result);
-			Result checkResult = checker.check(result, scope);
+			 checker.check(result, scope);
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
@@ -271,7 +270,7 @@ public class CheckerTest {
 		funCol = new Collector();
 		try {
 			Scope scope = funCol.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 		}
 		
@@ -287,7 +286,7 @@ public class CheckerTest {
 
 		try {
 			Scope scope = funCol.generate(result);
-			Result checkResult = checker.check(result, scope);
+			checker.check(result, scope);
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}

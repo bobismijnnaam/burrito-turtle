@@ -2,8 +2,6 @@ package sprockell;
 
 import java.util.Map;
 
-import comp.Type.Int;
-
 public class Target extends Operand {
 	public Form target;
 	public CodeAddr codeAddr = null;

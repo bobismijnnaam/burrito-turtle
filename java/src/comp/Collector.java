@@ -363,24 +363,6 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 	public List<String> getErrors() {
 		return this.errors;
 	}
-	
-	/** Checks the inferred type of a given parse tree,
-	 * and adds an error if it does not correspond to the expected type.
-	 */
-	private boolean checkType(ParserRuleContext node, Type expected) {
-		Type actual = getType(node);
-		if (actual == null) {
-			addError(node, "Missing inferred type of " + node.getText());
-			return false;
-		}
-		if (!actual.equals(expected)) {
-			addError(node, "Expected type '%s' but found '%s'", expected,
-					actual);
-			return false;
-		}
-		
-		return true;
-	}
 
 	/** Records an error at a given parse tree node.
 	 * @param ctx the parse tree node at which the error occurred

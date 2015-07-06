@@ -29,7 +29,6 @@ import lang.BurritoParser.GtExprContext;
 import lang.BurritoParser.GteExprContext;
 import lang.BurritoParser.IdExprContext;
 import lang.BurritoParser.IfStatContext;
-import lang.BurritoParser.ImpContext;
 import lang.BurritoParser.IncExprContext;
 import lang.BurritoParser.IntTypeContext;
 import lang.BurritoParser.LitExprContext;
