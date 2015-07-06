@@ -726,27 +726,25 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitTypeAssignStat(TypeAssignStatContext ctx) {
 		String id = ctx.ID().getText();
-		Type type = result.getType(ctx.type());
+		Type type = getType(ctx.type());
+		Type exprType = getType(ctx.expr());
 		
 		if (type instanceof Array) {
 			Array arr = (Array)	type;
-			if (arr.elemType instanceof Char && arr.size == -1) {
+			if (exprType instanceof StringLiteral & arr.size == -1 ) {
 				if (ctx.expr() == null) {
 					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
 					return;
 				}
 				
-				Type lit = getType(ctx.expr());
-				
-				if (lit instanceof StringLiteral) {
-					StringLiteral sl = (StringLiteral) lit;
+				if (exprType instanceof StringLiteral) {
+					StringLiteral sl = (StringLiteral) exprType;
 					((Array) type).size = sl.content.length() + 1; // + 1 is for null terminator
 				} else {
 					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
 					return;
 				}
-			} else if (arr.size == -1 && (arr.elemType instanceof Int || arr.elemType instanceof Bool)) {
-				Type exprType = getType(ctx.expr());
+			} else if (arr.size == -1 && (arr.elemType instanceof Int || arr.elemType instanceof Bool || arr.elemType instanceof Char)) {
 				if (exprType instanceof ArrayLiteral) {
 					ArrayLiteral al = (ArrayLiteral) exprType;
 					if (!arr.elemType.equals(al.elemType)) {

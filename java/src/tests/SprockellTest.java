@@ -23,12 +23,15 @@ public class SprockellTest {
 	
 	@Test
 	public void complexArrays() {
-		Program prog = Sprockell.scaryCompileFile(BASE_DIR, "ComplexArrays.symbol");
-		System.out.println(prog.prettyString(0, true));
 		String result = compileAndRunFile("ComplexArrays", 1);
+		String output = "Hello country!\n"
+				+ "Hello world!\n"
+				+ "axbycz\n"
+				+ "555111666333777555\n"
+				+ "truetruefalsefalsefalsetruetruefalse\n";
+		
 		assertNotNull("Compiling or executing went wrong", result);
-//		assertSanitized("4\n5\n6\n8\n", result);
-		System.out.println(result);
+		assertSanitized(output, result);
 	}
 	
 	@Test

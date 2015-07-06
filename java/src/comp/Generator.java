@@ -353,22 +353,15 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			} else if (right instanceof ArrayLiteral) {
 				ArrayLiteral al = (ArrayLiteral) right;
 				
-				if (al.elemType instanceof Int) {
-					prog.emit(Const, new Value(al.contents[0]), new Reg(RegE));
-					prog.emit(Store, new Reg(RegE), new MemAddr(SP));
-					
-					for (int i = 1; i < al.arrSize; i++) {
-						prog.emit(Const, new Value(al.contents[i]), new Reg(RegE));
-						prog.emit(Push, new Reg(RegE));
-					}
-					
-					prog.emit(Push, new Reg(Zero));
-				} else if (al.elemType instanceof Char) {
-					// TODO
-				} else if (al.elemType instanceof Bool) {
-					// TODO
+				prog.emit(Const, new Value(al.contents[0]), new Reg(RegE));
+				prog.emit(Store, new Reg(RegE), new MemAddr(SP));
+				
+				for (int i = 1; i < al.arrSize; i++) {
+					prog.emit(Const, new Value(al.contents[i]), new Reg(RegE));
+					prog.emit(Push, new Reg(RegE));
 				}
 				
+				prog.emit(Push, new Reg(Zero));
 			} else {
 				for (int i = 0; i < type.size(); i++) {
 					prog.emit(Push, new Reg(Zero));
@@ -848,19 +841,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	
 	@Override
 	public List<Instr> visitIdExpr(IdExprContext ctx) {
-//		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegD));
-//		
-//		Reach reach = checkResult.getReach(ctx);
-//		if (reach == Local) {
-//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegD));
-//			prog.emit(Load, new MemAddr(RegD), new Reg(RegE));
-//		} else if (reach == Global) {
-//			prog.emit(Const, new Value(-2147483648), new Reg(RegC)); // Value of 32 bits: 1000...000
-//			prog.emit(Compute, new Operator(Or), new Reg(RegC), new Reg(RegD), new Reg(RegD)); // set the address bit to 1 to indicate global variable
-//			prog.emit(Read, new MemAddr(RegD));
-//			prog.emit(Receive, new Reg(RegE));
-//		} 
-		
 		int offset = checkResult.getOffset(ctx);
 		Reach reach = checkResult.getReach(ctx);
 		Type type = checkResult.getType(ctx);

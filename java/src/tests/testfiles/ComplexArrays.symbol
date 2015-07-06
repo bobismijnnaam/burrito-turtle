@@ -7,40 +7,41 @@ void println(char_ chr)
 	<-;
 .
 
-
-char[6] msg;
 char[] helloWorld = "Hello world!";
-
-char[] test4 = ['a', 'b'];
-int[] test3 = [555, 666, 777];
-bool[] test5 = [true, false, False, True];
+char[] globalChars = ['a', 'b', 'c'];
+int[] globalInts = [555, 666, 777];
+bool[] globalBools = [true, false, False, True];
 
 void program()
 	char[] helloCountry = "Hello country!";
-	char[6] other;
+	char[] localChars = ['x', 'y', 'z'];
+	int[] localInts = [111, 333, 555];
+	bool[] localBools = [true, false, true, false];
 
-	int[] test = [111, 222, 333, 444];
-	
 	println(helloCountry);
 	println(helloWorld);
-
-	test[0]|\;
-	test[1]|\;
-	test[2]|\;
-
-	test4[0]|\;
-	test4[1]|\;
-
-	test3[0]|\;
-	test3[1]|\;
-	test3[2]|\;
 	
-	test5[0]|\;
-	test5[1]|\;
-	test5[2]|\;
-	test5[3]|\;
-
-	'~'|\;
+	int i;
+	i = 0; i < 3 @
+		globalChars[i]|;
+		localChars[i]|;
+		i+;
+	.
+	|\;
 	
+	i = 0; i < 3 @
+		globalInts[i]|;
+		localInts[i]|;
+		i+;
+	.
+	|\;
+		
+	i = 0; i < 4 @
+		globalBools[i]|;
+		localBools[i]|;
+		i+;
+	.
+	|\;
+
 	<-;
 .
