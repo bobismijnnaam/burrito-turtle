@@ -120,9 +120,8 @@ public class SprockellTest {
 		assertSanitized(output, result);
 	}
 	
-//	@Test
+	@Test
 	public void simpleArray() {
-		// TODO: Fix this!
 		String result = compileAndRunFile("SimpleArray");
 		String output = "0123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
 		assertNotNull("Compiling or executing went wrong", result);
@@ -137,9 +136,8 @@ public class SprockellTest {
 		assertSanitized(output, result);
 	}
 	
-//	@Test
+	@Test
 	public void multiDimArray() {
-		// TODO: Fix this!
 		String result = compileAndRunFile("MultiDimArray");
 		
 		String output = "";
@@ -289,7 +287,7 @@ public class SprockellTest {
 			prog.writeToSir("program.sir");
 			
 			Runtime rt = Runtime.getRuntime();
-			Process buildPr = rt.exec("sprint.exe " + cores); // rt.exec("ghc -i/sprockell/src -e main test.hs"
+			Process buildPr = rt.exec("sprint " + cores); // rt.exec("ghc -i/sprockell/src -e main test.hs"
 			buildPr.waitFor();
 
 			InputStream is = buildPr.getInputStream();

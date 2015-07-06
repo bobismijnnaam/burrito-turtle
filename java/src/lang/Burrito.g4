@@ -4,8 +4,8 @@ import BurritoVocab;
 
 program: (func | decl | imp)*;  
 
-imp: IMPORT PATH SEMI;  
-decl: type ID (ASS expr)? SEMI; 
+imp: IMPORT STRING SEMI;  
+decl: type ID (ASS expr)? SEMI;   
 	
 func: sig stat* END;
 sig: type NOT? ID LPAR (arg (COMMA arg)*)? RPAR;

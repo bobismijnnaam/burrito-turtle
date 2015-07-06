@@ -83,6 +83,11 @@ import comp.Type.Pointer;
 import comp.Type.StringLiteral;
 import comp.Type.Void;
 
+/**
+ * Does type checking phase of the program. Comes after the global type checking and collection phase
+ * done by Collector. Returns an instance of Result which can be used by Generator to correctly compile
+ * the program.
+ */
 public class Checker extends BurritoBaseListener {
 	
 	/** Result of the latest call of {@link #check}. */
@@ -92,6 +97,12 @@ public class Checker extends BurritoBaseListener {
 	/** List of errors collected in the latest call of {@link #check}. */
 	private List<String> errors;
 	
+	/**
+	 * Checks the parse tree starting with an empty scope
+	 * @param tree The AST
+	 * @return An instance of Result
+	 * @throws ParseException If any errors in syntax occur this error will be thrown
+	 */
 	public Result check(ParseTree tree) throws ParseException {
 		return check(tree, new Scope());
 	}
@@ -113,20 +124,9 @@ public class Checker extends BurritoBaseListener {
 		return this.result;
 	}
 	
-	//*************************
-	// START OF TYPE CHECKING
-	
-	// IMPORTS ------------------------
-	@Override
-	public void exitImp(ImpContext ctx) {
-		
-	}
-	
-	// GLOBALS -----------------------
-	
 	/**
-	 * The variable is already in the scope, but the expression wasn't checked.
-	 * That's what happens here.
+	 * The variable is already in the scope since Collector saw it already
+	 * but the expression wasn't checked. That's what happens here.
 	 */
 	@Override
 	public void exitDecl(DeclContext ctx) {
@@ -135,8 +135,6 @@ public class Checker extends BurritoBaseListener {
 
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
-		
-		// TODO: Sprint => Sprockell Interpreter
 		
 		if (ctx.expr() != null) {
 			if (getType(ctx.expr()) instanceof StringLiteral) {}

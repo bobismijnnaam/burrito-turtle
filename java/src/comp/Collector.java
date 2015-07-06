@@ -41,19 +41,22 @@ import comp.Type.StringLiteral;
 import comp.Type.Void;
 
 /**
- * Does an initial scan of the tree to collect functions and global variable declarations
- * Initialization order of global variables is equal to the order of declaration in the tree
+ * Does an initial scan of the tree to collect functions and global variable declarations.
+ * Initialization order of global variables is equal to the order of declaration in the tree.
  */
 public class Collector extends BurritoBaseVisitor<Integer> {
-	// TODO: Return statement checking (can probably be done with that flow thingy)
-	// Or maybe another visitor, or maybe this one. Each branch should just eventually reach a return statement
-	// That actually sounds completely doable.
 	private Scope scope;
 	private ParseTreeProperty<Type> types = new ParseTreeProperty<>();
 	private List<String> errors = new ArrayList<>();
 	
 	private int treeCode;
 	
+	/**
+	 * Generates a scope filled with globals and functions + overloads for use with the Checker.
+	 * Starts out with an empty scope.
+	 * @param tree The program tree to be scanned
+	 * @return A Scope instance
+	 */
 	public Scope generate(ParseTree tree) {
 		this.scope = new Scope();
 		treeCode = tree.hashCode();
@@ -61,6 +64,13 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return scope;
 	}
 	
+	/**
+	 * Generates a scope filled with globals and functions + overloads for use with the Checker.
+	 * Starts out with a given scope
+	 * @param tree The program tree to be scanned
+	 * @param scope A scope instance to begin with
+	 * @return A scope instance
+	 */
 	public Scope generator(ParseTree tree, Scope scope) {
 		this.scope = scope;
 		tree.accept(this);
@@ -129,6 +139,10 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return 0;
 	}
 	
+	/**
+	 * Sets type type of the array literal, and includes the contents of the array
+	 * in the type as well.
+	 */
 	@Override
 	public Integer visitSeqExpr(SeqExprContext ctx) {
 		for (LitExprContext ltx : ctx.litExpr()) {
@@ -158,6 +172,10 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return 0;
 	}
 
+	/**
+	 * Sets the type of a string literal, and includes the content of the string literal
+	 * in the type as well.
+	 */
 	@Override
 	public Integer visitStringExpr(StringExprContext ctx) {
 		StringLiteral sl = new StringLiteral();
@@ -208,6 +226,10 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return 0;
 	}
 	
+	/**
+	 * First visits all children needed to create the function signature,
+	 * and then registers the function.
+	 */
 	@Override
 	public Integer visitSig(SigContext ctx) {
 		visit(ctx.type());
@@ -275,6 +297,9 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return 0;
 	}
 	
+	/**
+	 * Creates a pointer type pointing to the type on the left.
+	 */
 	@Override
 	public Integer visitPointerType(PointerTypeContext ctx) {
 		visit(ctx.type());
@@ -284,6 +309,11 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return 0;
 	}
 
+	/**
+	 * Attaches an array type to the parent node. If the parent node is also an array
+	 * it sets the element type to that array type, such that a int[5][2] is an array of 5
+	 * arrays of 2 ints, and not an array of 2 arrays of 5 ints.
+	 */
 	@Override
 	public Integer visitArrayType(ArrayTypeContext ctx) {
 		visit(ctx.type());
@@ -306,34 +336,23 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		return null;
 	}
 	
-//	@Override
-//	public Integer visitArrayType(ArrayTypeContext ctx) {
-//		visit(ctx.type());
-//		
-//		Type.Array array = new Type.Array(getType(ctx.type()), new Integer(ctx.NUM().getText()));
-//		if (getType(ctx.type()).toString().equals("Array")) {
-//			Type.Array innerArray = (Array) getType(ctx.type());
-//			array.indexSize = new ArrayList<Integer>(innerArray.indexSize);
-//		}
-//		
-//		array.indexSize.add(new Integer(ctx.NUM().getText()));
-//
-//		setType(ctx, array);
-//
-//		return 0;
-//	}
-
+	/**
+	 * Sets the type of a node. Overwrites it if the type was set before.
+	 * @param node The node
+	 * @param type The type
+	 */
 	private void setType(ParseTree node, Type type) {
 		types.put(node, type);
 	}
 
+	/**
+	 * Gets the type of a node. Does not check if the type has been set.
+	 * @param node The node.
+	 * @return A type;
+	 */
 	private Type getType(ParseTree node) {
 		return types.get(node);
 	}
-
-	/**
-	 * Utility functions below here
-	 */
 
 	/** Indicates if any errors were encountered in this tree listener. */
 	public boolean hasErrors() {

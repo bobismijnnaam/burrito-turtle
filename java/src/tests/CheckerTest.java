@@ -48,24 +48,20 @@ public class CheckerTest {
 		try {
 			Scope scope = collector.generate(result);
 			Result checkResult = checker.check(result, scope);
-			//System.out.println(result.getChild(1).getChild(3).getChild(1).getText());
-			//System.out.println(checkResult.getType(result.getChild(1).getChild(3).getChild(1)));
 		} catch (ParseException e) {
 		}
 
-//		testProgram = "int add(int a, int b) <- a + b;. int program(bool x, bool y) <- add(x, y); .";
-//		result = parse(testProgram);
-//		checker = new Checker();
-//		
-//		try {
-//			Result checkResult = checker.check(result);
-//			System.out.println(result.getChild(1).getChild(1).getChild(2).getChild(1).getText());
-//			System.out.println(checkResult.getType(result.getChild(1).getChild(1).getChild(2).getChild(1)));
-//		} catch (ParseException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		System.out.println("Done");
+		testProgram = "int add(int a, int b) <- a + b; . void program() int a = add(2, 3); <-; .";
+		result = parse(testProgram);
+		checker = new Checker();
+		collector = new Collector();
+		
+		try {
+			Scope scope = collector.generate(result);
+			Result checkResult = checker.check(result, scope);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Test
@@ -257,7 +253,6 @@ public class CheckerTest {
 		String testProgram = "void program() int x = 0; <x> 1: x = 3; . <-;.";
 		ParseTree result = parse(testProgram);
 		Collector funCol = new Collector();
-		
 		Checker checker = new Checker();
 
 		try {
@@ -270,15 +265,17 @@ public class CheckerTest {
 		assertEquals(false, checker.hasErrors());
 		
 		// switch id not initialized
-//		testProgram = "int program() <x> 1: x = 2; . .";
-//		result = parse(testProgram);
-//		checker = new Checker();
-//		try {
-//			Result checkResult = checker.check(result);
-//		} catch (ParseException e) {
-//		}
-//		
-//		assertEquals(true, checker.hasErrors());
+		testProgram = "void program() <x> 1: x = 2; . <-; .";
+		result = parse(testProgram);
+		checker = new Checker();
+		funCol = new Collector();
+		try {
+			Scope scope = funCol.generate(result);
+			Result checkResult = checker.check(result, scope);
+		} catch (ParseException e) {
+		}
+		
+		assertEquals(true, checker.hasErrors());
 	}
 	
 	@Test

@@ -603,13 +603,32 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
-	// TODO: Handle pointers here
 	private List<Instr> emitArOp(ParserRuleContext ctx, Operator.Which op) {
-		visit(ctx.getChild(0));
-		prog.emit(Push, new Reg(RegE));
-		visit(ctx.getChild(2));
-		prog.emit(Pop, new Reg(RegD));
-		prog.emit(Compute, new Operator(op), new Reg(RegD), new Reg(RegE), new Reg(RegE));
+		Type left = checkResult.getType(ctx.getChild(0));
+		Type right = checkResult.getType(ctx.getChild(1));
+		
+		if (left instanceof Pointer) {
+			Pointer ptr = (Pointer) left;
+
+			visit(ctx.getChild(0));
+			prog.emit(Push, new Reg(RegE));
+			visit(ctx.getChild(1));
+			prog.emit(Const, new Value(ptr.pointsTo.size()), new Reg(RegD));
+			prog.emit(Compute, new Operator(Mul), new Reg(RegD), new Reg(RegE), new Reg(RegC));
+
+			if (op == Operator.Which.Sub) {
+				prog.emit(Compute, new Operator(Sub), new Reg(Zero), new Reg(RegC), new Reg(RegC));
+			}
+
+			prog.emit(Pop, new Reg(RegE));
+			adjustPtrInEToC(ctx);
+		} else {
+			visit(ctx.getChild(0));
+			prog.emit(Push, new Reg(RegE));
+			visit(ctx.getChild(2));
+			prog.emit(Pop, new Reg(RegD));
+			prog.emit(Compute, new Operator(op), new Reg(RegD), new Reg(RegE), new Reg(RegE));
+		}
 		
 		return null;
 	}
