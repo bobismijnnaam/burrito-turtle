@@ -19,7 +19,7 @@ public class Importer extends BurritoBaseVisitor<Integer> {
 	
 	@Override
 	public Integer visitImp(ImpContext ctx) {
-		imports.add(ctx.PATH().getText().replaceAll("\"", ""));
+		imports.add(ctx.STRING().getText().replaceAll("\"", ""));
 		return 0;
 	}
 	
