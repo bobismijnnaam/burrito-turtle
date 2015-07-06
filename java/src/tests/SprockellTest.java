@@ -233,7 +233,7 @@ public class SprockellTest {
 		assertSanitized(output, result);
 	}
 	
-//	@Test
+	@Test
 	public void importTest() {
 		// TODO: Fix this!
 		// compile file with imports
