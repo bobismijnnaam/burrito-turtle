@@ -920,6 +920,8 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitBlock(BlockContext ctx) {
 		scope.popScope();
+		
+		setToPop(ctx, scope.hasToPop());
 	}
 	
 	// END OF TYPE CHECKING
@@ -1020,5 +1022,9 @@ public class Checker extends BurritoBaseListener {
 	
 	public boolean getAssignable(ParseTree node) {
 		return result.getAssignable(node);
+	}
+	
+	public void setToPop(ParseTree node, int amount) {
+		result.setToPop(node, amount);
 	}
 }

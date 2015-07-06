@@ -37,14 +37,20 @@ public class Scope {
 	private boolean recordingArgs;
 	private int sprockellCounter = 0;
 	
+	private int popLeft = 0;
+	
 	/**
 	 * Pops the previous scope state off the stack, restoring previous sizes, type mappings, etc.
 	 */
 	public void popScope() {
+		int oldSize = size;
+		
 		size = sizeStack.pop();
 		types = typeStack.pop();
 		offsets = offsetStack.pop();
 		reaches = reachesStack.pop();
+		
+		popLeft = oldSize - size;
 	}
 	
 	/**
@@ -55,6 +61,12 @@ public class Scope {
 		typeStack.push(new HashMap<String, Type>(types));
 		offsetStack.push(new HashMap<String, Integer>(offsets));
 		reachesStack.push(new HashMap<String, Reach>(reaches));
+	}
+	
+	public int hasToPop() {
+		int val = popLeft;
+		popLeft = 0;
+		return val;
 	}
 
 	/**

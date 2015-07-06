@@ -16,6 +16,7 @@ public class Result {
 	private final ParseTreeProperty<Integer> stackSizes = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Reach> reaches = new ParseTreeProperty<>();
 	private final ParseTreeProperty<Boolean> assignables = new ParseTreeProperty<>(); 
+	private final ParseTreeProperty<Integer> popAmounts = new ParseTreeProperty<>();
 	
 	private int globalSize;
 	private int sprockells;
@@ -109,5 +110,13 @@ public class Result {
 	
 	public int minimumSprockells() {
 		return sprockells;
+	}
+	
+	public void setToPop(ParseTree node, int amount) {
+		this.popAmounts.put(node, amount);
+	}
+	
+	public int hasToPop(ParseTree node){
+		return this.popAmounts.get(node);
 	}
 }

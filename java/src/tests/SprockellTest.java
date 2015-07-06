@@ -95,6 +95,9 @@ public class SprockellTest {
 	
 	@Test
 	public void simpleWhile() {
+		Program program = Sprockell.scaryCompileFile(BASE_DIR, "SimpleWhile.symbol");
+		System.out.println(program.prettyString(0, true));
+
 		String output = "0123456789";
 		String result = compileAndRunFile("SimpleWhile");
 		assertNotNull("Compiling or executing went wrong", result);

@@ -23,7 +23,6 @@ stat: type ID ASS expr SEMI						#typeAssignStat
 	| expr? IO NOT? newlines SEMI				#outStat
 	| RETURN expr? SEMI							#returnStat
 	| expr SEMI									#exprStat
-	| ID IF (NUM block)* (DEFAULT block)? END	#switchStat
 	| START ID SEMI								#startStat
 	| LOCK ID SEMI								#lockStat
 	| UNLOCK ID	SEMI							#unlockStat
@@ -39,7 +38,9 @@ block: stat*;
 
 // target: expr;   
  
-expr: NOT expr								#notExpr
+expr: PTR ID								#deferExpr
+	| expr PTR								#derefExpr
+	| NOT expr								#notExpr
 	| expr (PLUS)+							#incExpr
 	| expr (MIN)+							#decExpr
 	| expr DIV expr							#divExpr
@@ -62,12 +63,10 @@ expr: NOT expr								#notExpr
 	| litExpr								#literalExpr
 	| MIN expr								#negExpr
 	| ID LPAR (expr (COMMA expr)*)? RPAR	#funcExpr
-	| expr PTR								#derefExpr
-	| PTR ID								#deferExpr
 	| expr LBRA expr RBRA 					#arrayExpr
 	;
 	
-litExpr: NUM								#numExpr
+litExpr: MIN? NUM							#numExpr
 	| CHARACTER								#characterExpr
 	| TRUE									#trueExpr
 	| FALSE 								#falseExpr
