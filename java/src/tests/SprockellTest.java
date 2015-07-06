@@ -325,7 +325,7 @@ public class SprockellTest {
 			prog.writeToSir(5 + ".sir");
 			
 			Runtime rt = Runtime.getRuntime();
-			Process buildPr = rt.exec("bobe.exe " + cores);
+			Process buildPr = rt.exec("sprint " + cores);
 			buildPr.waitFor();
 
 			InputStream is = buildPr.getInputStream();
