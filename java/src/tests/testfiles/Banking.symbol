@@ -1,0 +1,98 @@
+Lock myBankAccountLock;
+int myBankAccountBalance = 9035;
+
+Lock allDoneLock;
+int allDoneCount = 4;
+
+void doTransfers(int_ amounts, int amountCount)
+	int i = 0; i < amountCount @
+		lock myBankAccountLock;
+		
+		myBankAccountBalance = myBankAccountBalance + amounts_;
+		
+		unlock myBankAccountLock;
+		
+		amounts+;
+		i+;
+	.
+	
+	<-;	
+.
+
+void done()
+	lock allDoneLock;
+	
+	allDoneCount-;
+	
+	unlock allDoneLock;
+	
+	<-;
+.
+
+
+>> Adds: 650
+>> Subtracts: 150
+>> Net: +500
+void~ ING()
+	int[] amounts = [100, 230, -100, -50, 320];
+	
+	doTransfers(amounts, 5);
+	
+	done();
+	
+	<-;
+.
+
+>> Adds: 50
+>> Subtracts: 300
+>> Net: -250
+void~ ABN()
+	int[] amounts = [50, -100, -200];
+	
+	doTransfers(amounts, 3);
+	
+	done();
+	
+	<-;
+.
+
+>> Adds: 620
+>> Subtracts: -350
+>> Net: +270
+void~ Knab()
+	int[] amounts = [250, -300, -50, 200, 170];
+	
+	doTransfers(amounts, 5);
+	
+	done();
+	
+	<-;
+.
+
+>> Adds: 300
+>> Subtracts: 620
+>> Net: -320
+void~ ECB()
+	int[] amounts = [100, 100, 100, -120, -500];
+	
+	doTransfers(amounts, 5);
+	
+	done();
+	
+	<-;
+.
+
+void program()
+	-> ING; 	>> +500
+	-> ABN; 	>> -250
+	-> Knab; 	>> +270
+	-> ECB;		>> -320
+	
+	>> Afterwards: 9035 + 500 - 250 + 270 - 320 = 9235
+	
+	allDoneCount > 0 @ .
+	
+	myBankAccountBalance|\;
+	
+	<-;
+.
