@@ -23,7 +23,6 @@ stat: type ID ASS expr SEMI						#typeAssignStat
 	| expr? IO NOT? newlines SEMI				#outStat
 	| RETURN expr? SEMI							#returnStat
 	| expr SEMI									#exprStat
-	| ID IF (NUM block)* (DEFAULT block)? END	#switchStat
 	| START ID SEMI								#startStat
 	| LOCK ID SEMI								#lockStat
 	| UNLOCK ID	SEMI							#unlockStat
