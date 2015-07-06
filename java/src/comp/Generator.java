@@ -86,27 +86,67 @@ import comp.Type.Int;
 import comp.Type.Pointer;
 import comp.Type.StringLiteral;
 
+/**
+ * After the scanning and checking phase Generator does the generation phase using the
+ * type checking results from previous phases. It also manages threads, functions, and
+ * stitching together all the logical chunks with some logical glue (that is, code that 
+ * makes sure the heap is initialized once, makes sure each sprockell goes to the
+ * right subroutine, etc.).
+ */
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
+	
+	/** The function name of the main function. */
 	public static final String MAINMETHOD = "program";
 	
+	/**
+	 * Current program, all the visit* functions write to this program instance.
+	 * Can be switched around to for example write nodes that belong to a function
+	 * to a separate program instance that "contains" the function.
+	 */
 	private Program prog;
+	
 	private Result checkResult;
+	
+	/**
+	 * Stack of programs, such that after calling leavefunc() you are
+	 * writing to the previous program again.
+	 */
 	private Stack<Program> progStack = new Stack<>();
+	
+	/**
+	 * Contains all the functions, main method, and other logic chunks
+	 * such as (possibly overloaded) built-in functions
+	 */
 	private Map<String,Program> progMap = new HashMap<>();
 	
+	/**
+	 * Label that points to the main method
+	 */
 	private String mainLabel;
+	/**
+	 * Label that points the end, which leads control flow
+	 * through some NOPs first to make sure stdout is flushed.
+	 */
 	private String endLabel;
 	
+	/**
+	 * Labels of various (overloaded) built-in functions
+	 */
 	private String printBoolLabel;
 	private String printIntLabel;
 	private String printCharLabel;
 	private String printPointerLabel;
 	private String idleFuncLabel;
 	
-	// stdio = Addr stdioAddr
-	// stdioAddr = 0x1000000
+	/**
+	 * Address of stdio class member
+	 */
 	private final MemAddr stdio = new MemAddr(new Addr(0x1000000));
 	
+	/**
+	 * Amount of administrative space each sprockell needs to thread properly
+	 * Right now it's one integer, to indicate target adresses.
+	 */
 	private final int sprockellSegmentSize = 1;
 	
 	/**
@@ -120,6 +160,9 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		progMap.put(funcName, prog);
 	}
 	
+	/**
+	 * Restores the program that was previously available before calling enterfunc.
+	 */
 	private void leaveFunc() {
 		prog = progStack.pop();
 	}
@@ -135,8 +178,12 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return generate(tree, checkResult, 1);
 	}
 
-	// TODO: Make a consumer/producer program
-	// TODO: Make a banking system
+	/**
+	 * Visits the whole program, insert some threading & management glue, and
+	 * some final stdout nops
+	 * @param ctx The AST
+	 * @return Nothing relevant
+	 */
 	@Override
 	public List<Instr> visitProgram(ProgramContext ctx) {
 		endLabel = Program.mkLbl(ctx, "done");
@@ -231,7 +278,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			} else {
 				visit(ctx.expr());
 				// Value is now in E
-				// TODO: What if type is object or array?
 				
 				// Get offset
 				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
@@ -378,7 +424,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 	
 	/**
-	 * Saves value in register E in address pointed to by D. D SHOULD contain the address bit!
+	 * Emits code that saves value in register E in address pointed to by D.
+	 * D SHOULD contain the address bit!
 	 * When in doubt, this method uses ALL REGISTERS! After use, D still contains the address bit.
 	 * @param ctx A seed for the mkLbl function
 	 */
@@ -581,9 +628,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Compute, new Operator(Equal), workReg, new Reg(SPID), workReg);
 		prog.emit(Branch, workReg, new Target(nothingWrongLabel));
 
-		// TODO: Test if spid recoginition works
 		
-		// Write ~! to stdout to indicate wrong lock opening
+		// Write ~! to stdout to indicate wrong/double lock opening
 		prog.emit(Const, new Value(126), workReg);
 		prog.emit(Write, workReg, stdio);
 		prog.emit(Const, new Value(33), workReg);
@@ -897,9 +943,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		int offset = checkResult.getOffset(ctx.ID());
 		Reach reach = checkResult.getReach(ctx.ID());
 		
-//		loadIdRegDE(offset, reach);
-//		prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(Zero), new Reg(RegE));
-
 		prog.emit(Const, new Value(offset), new Reg(RegE));
 		prog.emit(Const, new Value(-1), new Reg(RegD)); // The pointer does not actually have an address
 		
@@ -914,7 +957,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	}
 	
 	/**
-	 * Dereferences an address (including address space bit) and puts the result in E. When it doubt, this needs ALL registers!
+	 * Emits code that dereferences an address (including address space bit)
+	 * and puts the result in E. When it doubt, this needs ALL registers!
 	 * @param ctx A seed for the mkLbl function.
 	 */
 	public void derefEinE(ParserRuleContext ctx) {
@@ -1020,29 +1064,9 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		prog.emit(Const, new Value(returnLabel), new Reg(RegE));
 		prog.emit(Push, new Reg(RegE));
 		
-		// TODO: What if an expr is an obj or array?
-		// Don't forget to also support this in the checker!
 		for (ExprContext expr : ctx.expr()) {
-			Type type = checkResult.getType(expr);
-			
-//			if (type instanceof Array) {
-//				Reach reach = checkResult.getReach(expr);
-//				
-//				if (reach == Global) {
-//					prog.emit(Const, new Value(1), new Reg(RegE));
-//					prog.emit(Push, new Reg(RegE));
-//					prog.emit(Const, new Value(checkResult.getOffset(expr)+1), new Reg(RegE));
-//					prog.emit(Push, new Reg(RegE));
-//				} else if (reach == Local) {
-//					prog.emit(Push, new Reg(Zero));
-//					prog.emit(Const, new Value(checkResult.getOffset(expr)), new Reg(RegE));
-//					prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-//					prog.emit(Push, new Reg(RegE));
-//				}
-//			} else {
-				visit(expr);
-				prog.emit(Push, new Reg(RegE));
-//			}
+			visit(expr);
+			prog.emit(Push, new Reg(RegE));
 		}
 		
 		// Push zero so the SP points to an EMPTY SLOT!
@@ -1076,51 +1100,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		
 		return null;
 	}
-	
-//	@Override
-//	public List<Instr> visitLenExpr(LenExprContext ctx) {
-//		Type type = checkResult.getType(ctx.ID());
-//	
-//		if (type instanceof AnyArray) {
-//			String stackLabel = Program.mkLbl(ctx, "stackLabel");
-//			String doneLabel = Program.mkLbl(ctx, "doneLabel");
-//			
-//			prog.emit(Const, new Value(1), new Reg(RegD)); // D contains 1
-//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE)); // E contains the anyarray address
-//			
-//			prog.emit(Load, new MemAddr(RegE), new Reg(RegC)); // C contains whether or not it is global
-//			
-//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-//		
-//			prog.emit(Compute, new Operator(Equal), new Reg(RegC), new Reg(Zero), new Reg(RegC));
-//			prog.emit(Branch, new Reg(RegC), new Target(stackLabel));
-//			// It's a global variable!
-//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // minus 1 to get at the integer that stores the size
-//			prog.emit(Read, new MemAddr(RegE));
-//			prog.emit(Receive, new Reg(RegE));
-//			prog.emit(Jump, new Target(doneLabel));
-//			
-//			// It's a stack variable!
-//			prog.emit(stackLabel, Compute, new Operator(Add), new Reg(RegE), new Reg(RegD), new Reg(RegE)); // add 1 to get at the integer that stores the size (it's on the stack so we need to go towards 128)
-//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-//			prog.emit(doneLabel, Nop);
-//		} else if (type instanceof Array) {
-//			Reach reach = checkResult.getReach(ctx.ID());
-//			
-//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-//			if (reach == Local) {
-//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-//				prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-//			} else if (reach == Global) {
-//				prog.emit(Read, new MemAddr(RegE));
-//				prog.emit(Receive, new Reg(RegE));
-//			}
-//		}
-//		
-//		return null;
-//	}
 	
 	@Override
 	public List<Instr> visitReturnStat(ReturnStatContext ctx) {
@@ -1333,6 +1312,10 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 	
+	/**
+	 * When requested includes code for printing an int in the produced code.
+	 * @param ctx A seed for mkLbl
+	 */
 	public void includePrintInt(ParserRuleContext ctx) {
 		if (printIntLabel == null) {
 			printIntLabel = "pipeOp_int";
@@ -1369,8 +1352,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			// Take modulo of current value and save it on the stack
 			prog.emit(begin, Compute, mod, numReg, orderReg, workReg);
 			prog.emit(Push, workReg);
-//			prog.emit(Const, new Value(100), workReg);
-//			prog.emit(Write, workReg, stdio);
 			
 			// Divide current modulo by 10 to extract the current digit
 			// 12345 mod 10 => 5, 10 / 10 => 1, 5 div 1 = 5 (the digit)
@@ -1417,7 +1398,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Compute, new Operator(Add), workReg, asciiReg, workReg);
 			
 			// Output it
-//					prog.emit(Write, workReg, new MemAddr("stdio"));
 			prog.emit(Write, workReg, stdio);
 			
 			// If all digits have been written to stdio, we're done
@@ -1448,6 +1428,11 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 		return null;
 	}
 
+	/**
+	 * Adds code the program that causes the sprockell to spin idle
+	 * and monitor a shared memory address. As soon as it sees a number
+	 * written to that address it jumps to that number.
+	 */
 	private void includeIdleFunc() {
 		if (idleFuncLabel == null) {
 			idleFuncLabel = "idleFunc";

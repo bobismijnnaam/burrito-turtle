@@ -150,8 +150,6 @@ public class Checker extends BurritoBaseListener {
 		}	
 	}
 	
-	// FUNCTIONS ---------------------
-	
 	@Override
 	public void enterSig(SigContext ctx) {
 		if (!scope.startArgRecording()) {
@@ -238,8 +236,6 @@ public class Checker extends BurritoBaseListener {
 		setStackSize(ctx, scope.getCurrentStackSize());
 	};
 	
-	// TYPES -------------------------
-	
 	@Override
 	public void exitBoolType(BoolTypeContext ctx) {
 		setType(ctx, new Type.Bool());
@@ -289,7 +285,6 @@ public class Checker extends BurritoBaseListener {
 		}
 	}
 	
-	// EXPR -----------------------------
 	@Override
 	public void exitFalseExpr(FalseExprContext ctx) {
 		setType(ctx, new Type.Bool());
@@ -340,6 +335,9 @@ public class Checker extends BurritoBaseListener {
 		setAssignable(ctx, false);
 	}
 	
+	/**
+	 * Parses literals and puts the contents of the literals in the types as well
+	 */
 	@Override
 	public void exitSeqExpr(SeqExprContext ctx) {
 		Type first = getType(ctx.litExpr(0));
@@ -407,9 +405,6 @@ public class Checker extends BurritoBaseListener {
 		setOffset(ctx, this.scope.offset(id)); 
 		setReach(ctx, this.scope.reach(id)); 
 		setAssignable(ctx, true);
-
-//		if (checkType(ctx, type)) { // This looks like bollocks
-//		}
 	}
 	
 	@Override
@@ -641,26 +636,6 @@ public class Checker extends BurritoBaseListener {
 		}
 	}
 	
-//	@Override
-//	public void exitLenExpr(LenExprContext ctx) {
-//		String id = ctx.ID().getText();
-//		Type type = scope.type(id);
-//
-//		if (!((type instanceof Type.Array) || (type instanceof Type.AnyArray))) {
-//			addError(ctx, "len can only be used with arrays");
-//		}
-//		
-//		if (!scope.contains(id)) {
-//			addError(ctx,  "Variable " + id + " not defined");
-//			return;
-//		}
-//		
-//		setType(ctx, new Type.Int());
-//		setType(ctx.ID(), type);
-//		setOffset(ctx.ID(), scope.offset(id));
-//		setReach(ctx.ID(), scope.reach(id));
-//	}
-	
 	@Override
 	public void exitDerefExpr(DerefExprContext ctx) {
 		Type left = getType(ctx.expr());
@@ -690,11 +665,7 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx, new Type.Pointer(type));
 		setAssignable(ctx, false);
 	};
-	
-	
-	
-	// STATS ----------------------------
-	
+
 	@Override
 	public void exitOutStat(OutStatContext ctx) {
 		if (ctx.expr() == null)
@@ -804,7 +775,6 @@ public class Checker extends BurritoBaseListener {
 		checkType(ctx.expr(), new Type.Bool());
 	}
 	
-	// += -= /= *= stats
 	@Override
 	public void exitPlusAssStat(PlusAssStatContext ctx) {
 		assChecker(ctx.expr(0), ctx.expr(1), Operator.Which.Add);
@@ -891,11 +861,8 @@ public class Checker extends BurritoBaseListener {
 		
 	}
 	
-	// SWITCH
 	@Override
 	public void exitSwitchStat(SwitchStatContext ctx) {
-		// :TODO clean switch stat
-
 		Type type = getType(ctx.expr());
 
 		if (type != null) {
@@ -909,7 +876,6 @@ public class Checker extends BurritoBaseListener {
 		}
 	}
 	
-	// BLOCK THINGY -------------------------------
 	@Override
 	public void enterBlock(BlockContext ctx) {
 		scope.pushScope();
@@ -921,9 +887,6 @@ public class Checker extends BurritoBaseListener {
 		
 		setToPop(ctx, scope.hasToPop());
 	}
-	
-	// END OF TYPE CHECKING
-	//**************************
 	
 	/** Indicates if any errors were encountered in this tree listener. */
 	public boolean hasErrors() {
@@ -994,34 +957,42 @@ public class Checker extends BurritoBaseListener {
 		return this.result.getType(node);
 	}
 	
+	/** Sets the function on a node */
 	private void setFunction(ParseTree node, Function.Overload function) {
 		this.result.setFunction(node, function);
 	}
 	
+	/** Gets the function attached to a node */
 	private Function.Overload getFunction(ParseTree node) {
 		return this.result.getFunction(node);
 	}
 
+	/** Sets the given stack size at any point in the program */
 	private void setStackSize(ParseTree node, int currentStackSize) {
 		this.result.setStackSize(node, currentStackSize);
 	}
 
+	/** Sets the reach of variables (global or local) at nodes */
 	private void setReach(ParseTree node, Reach reach) {
 		this.result.setReach(node, reach);
 	}
 	
+	/** Retrieves the reach of variables from nodes */
 	public Reach getReach(ParseTree node) {
 		return this.result.getReach(node);
 	}
 	
+	/** Sets whether or not something can be assigned to certain expressions */
 	public void setAssignable(ParseTree node, boolean assign) {
 		result.setAssignable(node, assign);
 	}
 	
+	/** Gets whether or not something can be assigned to node */
 	public boolean getAssignable(ParseTree node) {
 		return result.getAssignable(node);
 	}
 	
+	/** Set at the end of a block how much from the stack should be popped */
 	public void setToPop(ParseTree node, int amount) {
 		result.setToPop(node, amount);
 	}
