@@ -6,7 +6,7 @@ import Data.Char
 import Sprockell.System
 
 main = do
-	text <- readFile "5.sir"
+	text <- readFile "program.sir"
 	args <- getArgs
 	let cores = intOrEmpty args
 	let content = lines text

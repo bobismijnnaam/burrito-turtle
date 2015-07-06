@@ -191,6 +191,27 @@ abstract public class Type {
 		}
 	}
 	
+	static public class ArrayLiteral extends Type {
+		public Type elemType;
+		public int arrSize;
+		public int[] contents;
+
+		@Override
+		public int size() {
+			return arrSize;
+		}
+
+		@Override
+		public boolean assignable() {
+			return false;
+		}
+		
+		@Override
+		public String toString() {
+			return "array literal containing " + elemType + " of length " + arrSize;
+		}
+	}
+	
 	static public class Pointer extends Type {
 		public Type pointsTo;
 		

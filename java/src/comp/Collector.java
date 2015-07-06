@@ -8,15 +8,21 @@ import lang.BurritoParser.ArgContext;
 import lang.BurritoParser.ArrayTypeContext;
 import lang.BurritoParser.BoolTypeContext;
 import lang.BurritoParser.CharTypeContext;
+import lang.BurritoParser.CharacterExprContext;
 import lang.BurritoParser.DeclContext;
+import lang.BurritoParser.FalseExprContext;
 import lang.BurritoParser.FuncContext;
 import lang.BurritoParser.IntTypeContext;
+import lang.BurritoParser.LitExprContext;
 import lang.BurritoParser.LiteralExprContext;
 import lang.BurritoParser.LockTypeContext;
+import lang.BurritoParser.NumExprContext;
 import lang.BurritoParser.PointerTypeContext;
 import lang.BurritoParser.ProgramContext;
+import lang.BurritoParser.SeqExprContext;
 import lang.BurritoParser.SigContext;
 import lang.BurritoParser.StringExprContext;
+import lang.BurritoParser.TrueExprContext;
 import lang.BurritoParser.VoidTypeContext;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -27,7 +33,10 @@ import org.antlr.v4.runtime.tree.ParseTreeProperty;
 import sprockell.Program;
 
 import comp.Type.Array;
+import comp.Type.ArrayLiteral;
+import comp.Type.Bool;
 import comp.Type.Char;
+import comp.Type.Int;
 import comp.Type.StringLiteral;
 import comp.Type.Void;
 
@@ -83,16 +92,26 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 			
 			if (type instanceof Array) {
 				Array arr = (Array) type;
-				if (arr.elemType instanceof Char && arr.size == -1) {
-					Type exprType = getType(ctx.expr());
-					if (exprType instanceof StringLiteral) {
-						StringLiteral sl = (StringLiteral) exprType;
-						arr.size = sl.content.length() + 1;
+				Type exprType = getType(ctx.expr());
+
+				if (arr.elemType instanceof Char && arr.size == -1 && exprType instanceof StringLiteral) {
+					StringLiteral sl = (StringLiteral) exprType;
+					arr.size = sl.content.length() + 1;
+				} else if (arr.size == -1 && (arr.elemType instanceof Int
+						|| arr.elemType instanceof Bool
+						|| arr.elemType instanceof Char)) {
+
+					if (exprType instanceof ArrayLiteral) {
+						ArrayLiteral al = (ArrayLiteral) exprType;
+						if (!arr.elemType.equals(al.elemType)) {
+							addError(ctx, "It is prohibited to assign a literal of " + al.elemType + " to an " + arr);
+						}
+						arr.size = al.arrSize;
 					} else {
-						addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+						addError(ctx, "Incomplete array type is only to be used with literal assignment");
 					}
 				} else if (arr.isIncomplete()) {
-					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
+					addError(ctx, "Incomplete array type is only to be used with literal assignment");
 				}
 			}
 		}
@@ -109,12 +128,76 @@ public class Collector extends BurritoBaseVisitor<Integer> {
 		setType(ctx, getType(ctx.litExpr()));
 		return 0;
 	}
+	
+	@Override
+	public Integer visitSeqExpr(SeqExprContext ctx) {
+		for (LitExprContext ltx : ctx.litExpr()) {
+			visit(ltx);
+		}
+		
+		Type first = getType(ctx.litExpr(0));
+		
+		if (!(first instanceof Bool || first instanceof Int || first instanceof Char)) {
+			addError(ctx, "An array literal can only contain bools, ints, or chars");
+			return 0;
+		}
+		
+		boolean allTheSame = true;
+		for (int i = 1; i < ctx.litExpr().size(); i++) {
+			allTheSame = allTheSame && first.equals(getType(ctx.litExpr(i)));
+		}
+		
+		if (!allTheSame)
+			addError(ctx, "In an array literal can only contain one type, in this case " + first);
+		
+		ArrayLiteral thisType = new ArrayLiteral();
+		thisType.elemType = first;
+		thisType.arrSize = ctx.litExpr().size();
+		setType(ctx, thisType);
+	
+		return 0;
+	}
 
 	@Override
 	public Integer visitStringExpr(StringExprContext ctx) {
 		StringLiteral sl = new StringLiteral();
 		sl.content = ctx.getText().substring(1, ctx.getText().length() - 1);
 		setType(ctx, sl);
+		return 0;
+	}
+
+	@Override
+	public Integer visitFalseExpr(FalseExprContext ctx) {
+		setType(ctx, new Type.Bool());
+		return 0;
+	}
+	
+	@Override
+	public Integer visitTrueExpr(TrueExprContext ctx) {
+		setType(ctx, new Type.Bool());
+		return 0;
+	}
+	
+	@Override
+	public Integer visitNumExpr(NumExprContext ctx) {
+		setType(ctx, new Type.Int());
+		return 0;
+	}
+	
+	@Override
+	public Integer visitCharacterExpr(CharacterExprContext ctx) {
+		setType(ctx, new Type.Char());
+
+		String c = ctx.CHARACTER().getText();
+		String cStrip = c.replaceAll("'", "");
+		
+		if (cStrip.equals("\\0")) {
+		} else if (cStrip.equals("\\n")) {
+		} else if (cStrip.length() == 1){
+		} else {
+			addError(ctx, "Invalid character literal: " + ctx.getText());
+		}
+		
 		return 0;
 	}
 	

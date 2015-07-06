@@ -54,6 +54,7 @@ import lang.BurritoParser.PlusAssStatContext;
 import lang.BurritoParser.PlusExprContext;
 import lang.BurritoParser.PointerTypeContext;
 import lang.BurritoParser.PowExprContext;
+import lang.BurritoParser.SeqExprContext;
 import lang.BurritoParser.SigContext;
 import lang.BurritoParser.StartStatContext;
 import lang.BurritoParser.StringExprContext;
@@ -74,6 +75,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import sprockell.Operator;
 
 import comp.Type.Array;
+import comp.Type.ArrayLiteral;
 import comp.Type.Bool;
 import comp.Type.Char;
 import comp.Type.Int;
@@ -117,7 +119,7 @@ public class Checker extends BurritoBaseListener {
 	// IMPORTS ------------------------
 	@Override
 	public void exitImp(ImpContext ctx) {
-		//System.out.println(ctx.ID().getText());
+		
 	}
 	
 	// GLOBALS -----------------------
@@ -134,10 +136,11 @@ public class Checker extends BurritoBaseListener {
 		setOffset(ctx.ID(), scope.offset(id));
 		setReach(ctx.ID(), scope.reach(id));
 		
-		// TODO: Sprint => Sprockkel In Time
+		// TODO: Sprint => Sprockell Interpreter
 		
 		if (ctx.expr() != null) {
 			if (getType(ctx.expr()) instanceof StringLiteral) {}
+			else if (getType(ctx.expr()) instanceof ArrayLiteral) {}
 			else {
 				if (!type.assignable()) {
 					addError(ctx, "It is prohibited to assign a value to type " + type);
@@ -340,6 +343,55 @@ public class Checker extends BurritoBaseListener {
 	}
 	
 	@Override
+	public void exitSeqExpr(SeqExprContext ctx) {
+		Type first = getType(ctx.litExpr(0));
+		
+		if (!(first instanceof Bool || first instanceof Int || first instanceof Char)) {
+			addError(ctx, "An array literal can only contain bools, ints, or chars");
+			return;
+		}
+		
+		boolean allTheSame = true;
+		for (int i = 1; i < ctx.litExpr().size(); i++) {
+			allTheSame = allTheSame && first.equals(getType(ctx.litExpr(i)));
+		}
+		
+		if (!allTheSame) {
+			addError(ctx, "In an array literal can only contain one type, in this case " + first);
+			return;
+		}
+
+		ArrayLiteral thisType = new ArrayLiteral();
+		thisType.elemType = first;
+		thisType.arrSize = ctx.litExpr().size();
+		thisType.contents = new int[ctx.litExpr().size()];
+		
+		if (thisType.elemType instanceof Int) {
+			for (int i = 0; i < thisType.arrSize; i++) {
+				String conts = ctx.litExpr(i).getText();
+				thisType.contents[i] = new Integer(conts); 
+			}
+		} else if (thisType.elemType instanceof Bool) {
+			for (int i = 0; i < thisType.arrSize; i++) {
+				String conts = ctx.litExpr(i).getText();
+				if (conts.toLowerCase().charAt(0) == 't') {
+					thisType.contents[i] = 1;
+				} else {
+					thisType.contents[i] = 0;
+				}
+			}
+		} else if (thisType.elemType instanceof Char) {
+			for (int i = 0; i < thisType.arrSize; i++) {
+				thisType.contents[i] = ctx.litExpr(i).getText().charAt(1);
+			}			
+		}
+		
+		setType(ctx, thisType);
+	
+		return;
+	}
+	
+	@Override
 	public void exitIdExpr(IdExprContext ctx) {
 		String id = ctx.getText();
 		Type type = this.scope.type(id);
@@ -367,41 +419,6 @@ public class Checker extends BurritoBaseListener {
 		setType(ctx, getType(ctx.expr()));
 		setAssignable(ctx, getAssignable(ctx.expr()));
 	}
-	
-//	@Override
-//	public void exitArrayExpr(ArrayExprContext ctx) {
-//		String id = ctx.ID().getText();
-//		Type type = scope.type(id);
-//		
-//		if (type instanceof Type.Array) {
-//			Type.Array array = (Array) this.scope.type(id);
-//			if (array == null) {
-//				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-//			} else {
-//				setType(ctx.ID(), array);
-//				
-//				setType(ctx, array.getBaseType());
-//				setOffset(ctx.ID(), this.scope.offset(id));
-//				setReach(ctx.ID(), this.scope.reach(id));
-//				for (ExprContext expr : ctx.expr())
-//					checkType(expr, new Type.Int()); 
-//			}
-//		} else if (type instanceof Type.AnyArray) {
-//			AnyArray array = (AnyArray) this.scope.type(id);
-//			if (array == null) {
-//				addError(ctx, "Missing inferred type of " + ctx.ID().getText());
-//			} else {
-//				setType(ctx.ID(), array);
-//				
-//				setType(ctx, array.getBaseType());
-//				setOffset(ctx.ID(), this.scope.offset(id));
-//				setReach(ctx.ID(), this.scope.reach(id));
-//				for (ExprContext expr : ctx.expr()) {
-//					checkType(expr, new Type.Int()); 
-//				}
-//			}			
-//		}
-//	}
 	
 	@Override
 	public void exitIncExpr(IncExprContext ctx) {
@@ -728,6 +745,17 @@ public class Checker extends BurritoBaseListener {
 					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
 					return;
 				}
+			} else if (arr.size == -1 && (arr.elemType instanceof Int || arr.elemType instanceof Bool)) {
+				Type exprType = getType(ctx.expr());
+				if (exprType instanceof ArrayLiteral) {
+					ArrayLiteral al = (ArrayLiteral) exprType;
+					if (!arr.elemType.equals(al.elemType)) {
+						addError(ctx, "It is prohibited to assign a literal of " + al.elemType + " to an " + arr);
+					}
+					arr.size = al.arrSize;
+				} else {
+					addError(ctx, "Incomplete array type is only to be used with literal assignment");
+				}
 			} else {
 				if (arr.isIncomplete()) {
 					addError(ctx, "Incomplete chararray type is only to be used with string literal assignment");
@@ -871,9 +899,9 @@ public class Checker extends BurritoBaseListener {
 	@Override
 	public void exitSwitchStat(SwitchStatContext ctx) {
 		// :TODO clean switch stat
-		//System.out.println(id);
+
 		Type type = getType(ctx.expr());
-		//System.out.println(type);
+
 		if (type != null) {
 			setType(ctx, type);
 			

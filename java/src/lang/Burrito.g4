@@ -72,6 +72,7 @@ litExpr: NUM								#numExpr
 	| TRUE									#trueExpr
 	| FALSE 								#falseExpr
 	| STRING								#stringExpr
+	| LBRA litExpr (COMMA litExpr)* RBRA	#seqExpr
 	;
 
 type: INT					#intType 

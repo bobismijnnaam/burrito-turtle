@@ -280,10 +280,10 @@ public class SprockellTest {
 		}
 	
 		try {
-			prog.writeToSir(5 + ".sir");
+			prog.writeToSir("program.sir");
 			
 			Runtime rt = Runtime.getRuntime();
-			Process buildPr = rt.exec("bobe.exe " + cores); // rt.exec("ghc -i/sprockell/src -e main test.hs"
+			Process buildPr = rt.exec("sprint.exe " + cores); // rt.exec("ghc -i/sprockell/src -e main test.hs"
 			buildPr.waitFor();
 
 			InputStream is = buildPr.getInputStream();

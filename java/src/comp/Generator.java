@@ -79,11 +79,12 @@ import sprockell.Target;
 import sprockell.Value;
 
 import comp.Type.Array;
+import comp.Type.ArrayLiteral;
+import comp.Type.Bool;
 import comp.Type.Char;
 import comp.Type.Int;
 import comp.Type.Pointer;
 import comp.Type.StringLiteral;
-
 
 public class Generator extends BurritoBaseVisitor<List<Instr>> {
 	public static final String MAINMETHOD = "program";
@@ -213,6 +214,20 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 					prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegC), new Reg(RegD));
 				}
 				prog.emit(Write, new Reg(Zero), new MemAddr(RegD));
+				
+			} else if (right instanceof ArrayLiteral) {
+				ArrayLiteral al = (ArrayLiteral) right;
+				
+				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegD));
+				prog.emit(Const, new Value(1), new Reg(RegC));
+				
+				for (int i = 0; i < al.arrSize; i++) {
+					prog.emit(Const, new Value(al.contents[i]), new Reg(RegE));
+					prog.emit(Write, new Reg(RegE), new MemAddr(RegD));
+					prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegC), new Reg(RegD));
+				}
+				
+				prog.emit(Push, new Reg(Zero));
 			} else {
 				visit(ctx.expr());
 				// Value is now in E
@@ -298,7 +313,6 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 
 			prog.emit(Pop, new Reg(RegD));
 		} else {
-			System.out.println("GRR");
 			prog.emit(Pop, new Reg(RegD)); // Restore the target address
 			prog.emit(Pop, new Reg(RegC)); // Put the previous value in C
 			prog.emit(Compute, new Operator(op), new Reg(RegC), new Reg(RegE), new Reg(RegE)); // Put the new value in E
@@ -336,6 +350,25 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 
 				prog.emit(Push, new Reg(Zero));
 				prog.emit(Push, new Reg(Zero));
+			} else if (right instanceof ArrayLiteral) {
+				ArrayLiteral al = (ArrayLiteral) right;
+				
+				if (al.elemType instanceof Int) {
+					prog.emit(Const, new Value(al.contents[0]), new Reg(RegE));
+					prog.emit(Store, new Reg(RegE), new MemAddr(SP));
+					
+					for (int i = 1; i < al.arrSize; i++) {
+						prog.emit(Const, new Value(al.contents[i]), new Reg(RegE));
+						prog.emit(Push, new Reg(RegE));
+					}
+					
+					prog.emit(Push, new Reg(Zero));
+				} else if (al.elemType instanceof Char) {
+					// TODO
+				} else if (al.elemType instanceof Bool) {
+					// TODO
+				}
+				
 			} else {
 				for (int i = 0; i < type.size(); i++) {
 					prog.emit(Push, new Reg(Zero));
@@ -400,92 +433,8 @@ public class Generator extends BurritoBaseVisitor<List<Instr>> {
 			prog.emit(Push, new Reg(Zero));
 		}
 		
-		// TODO: Is this relevant?
-//		if (type instanceof Type.Pointer) {
-//			Type.Pointer ptr = (Type.Pointer) type;
-//
-//			if (ptr.isArray()) {
-//				prog.emit(Push, new Reg(Zero));
-//				
-//				prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-//				prog.emit(Const, new Value(1), new Reg(RegD));
-//				prog.emit(Compute, new Operator(Add), new Reg(RegD), new Reg(RegE), new Reg(RegD));
-//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegD), new Reg(RegD));
-//				prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-//				prog.emit(Store, new Reg(RegD), new MemAddr(RegE));
-//			}
-//		}
-		
 		return null;
 	}
-	
-//	@Override
-//	public List<Instr> visitArrayTarget(ArrayTargetContext ctx) {
-//		for (ExprContext expr : ctx.expr()) {
-//			visit(expr);
-//			prog.emit(Push, new Reg(RegE));
-//		}
-//		
-//		Type type = checkResult.getType(ctx.ID());
-//		
-//		if (type instanceof Array) {
-//			Array array = (Array) type;
-//			prog.emit(Const, new Value(0), new Reg(RegC));
-//			
-//			// TODO: Arrays don't actually work with anything bigger than an integer :(
-//			int size = 1;
-//			for (int i = array.indexSize.size() - 1; i >= 0; i--) {
-//				prog.emit(Pop, new Reg(RegE));
-//				prog.emit(Const, new Value(size), new Reg(RegD));
-//				prog.emit(Compute, new Operator(Mul), new Reg(RegE), new Reg(RegD), new Reg(RegE));
-//				prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegC));
-//				size *= array.indexSize.get(i);
-//			}
-//			
-//			// In RegC staat nu offset relatief in array
-//			
-//			// Get offset from ctx.ID() in RegB
-//			// The + 1 is to account for the integer at the array address, which contains the length of the array
-//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID()) + 1), new Reg(RegB));
-//			
-//			prog.emit(Compute, new Operator(Add), new Reg(RegB), new Reg(RegC), new Reg(RegE));
-//		} else if (type instanceof AnyArray) {
-//			AnyArray array = (AnyArray) type;
-//			
-//			// The first offset
-//			prog.emit(Const, new Value(array.getBaseType().size()), new Reg(RegC));
-//			prog.emit(Pop, new Reg(RegB));
-//			prog.emit(Compute, new Operator(Mul), new Reg(RegB), new Reg(RegC), new Reg(RegC));
-//			
-//			// C now holds the offset within the array
-//			
-//			if (array.elemType instanceof Array) {
-//				// TODO: Implement this
-//				System.out.println("Variable nested arrays not yet implemented");
-//			} 
-//
-//			// We have the correct offset!
-//
-//			prog.emit(Const, new Value(checkResult.getOffset(ctx.ID())), new Reg(RegE));
-//			prog.emit(Compute, new Operator(Sub), new Reg(RegA), new Reg(RegE), new Reg(RegE));
-//			prog.emit(Load, new MemAddr(RegE), new Reg(RegD));
-//			prog.emit(Const, new Value(1), new Reg(RegB));
-//			prog.emit(Compute, new Operator(Sub), new Reg(RegE), new Reg(RegB), new Reg(RegE));
-//			prog.emit(Load, new MemAddr(RegE), new Reg(RegE));
-//			prog.emit(Compute, new Operator(Add), new Reg(RegE), new Reg(RegC), new Reg(RegE));
-//			
-//			// E contains the offset of the first array element. D contains whether or not it's a global array
-//		}
-//			
-//		return null;
-//	}
-	
-//	@Override
-//	public List<Instr> visitIdTarget(IdTargetContext ctx) {
-//		// Get offset from ctx.ID() in RegE
-//		prog.emit(Const, new Value(checkResult.getOffset(ctx)), new Reg(RegE));
-//		return null;
-//	}
 	
 	@Override
 	public List<Instr> visitIfStat(IfStatContext ctx) {
